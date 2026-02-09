@@ -1,0 +1,40 @@
+{
+  "name": "西门催雪",
+  "appid": "__UNI__XIMENCUIXUE",
+  "description": "下雪查找小程序 — 帮助用户快速查找当前哪些地方正在下雪或即将下雪",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "wx0000000000000000",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "enhance": true,
+      "postcss": true,
+      "minified": true
+    },
+    "usingComponents": true,
+    "optimization": {
+      "subPackages": true
+    },
+    "cloudfunctionRoot": "cloudfunctions/",
+    "permission": {
+      "scope.userLocation": {
+        "desc": "需要获取您的位置信息，用于查找附近降雪区域"
+      }
+    },
+    "requiredPrivateInfos": [
+      "getLocation"
+    ]
+  },
+  "h5": {
+    "devServer": {
+      "port": 8080,
+      "disableHostCheck": true
+    },
+    "router": {
+      "mode": "hash"
+    }
+  }
+}
