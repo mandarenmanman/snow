@@ -17,65 +17,62 @@ import presetTailwind from '@twind/preset-tailwind'
  * 以冰蓝（ice-blue）为主色调，雪白（snow-white）为辅助色调。
  */
 const m3Colors = {
-  // 主色调 — 冰蓝 (Primary)
+  // 主色调 — 霜蓝 (Primary)
   primary: {
-    DEFAULT: '#4FC3F7',   // 冰蓝主色
-    light: '#8BF6FF',     // 浅冰蓝
-    dark: '#0093C4',      // 深冰蓝
-    container: '#E1F5FE', // 主色容器（浅底）
-    'on-container': '#01579B', // 主色容器上的文字
+    DEFAULT: '#5BA8F5',
+    light: '#A0D0FF',
+    dark: '#2979C1',
+    container: '#DCEEFB',
+    'on-container': '#0B3D6E',
   },
-  // 辅助色调 — 雪白 (Secondary)
+  // 辅助色调 — 雾蓝 (Secondary)
   secondary: {
-    DEFAULT: '#B3E5FC',   // 雪白蓝
-    light: '#E6FFFF',     // 极浅雪白
-    dark: '#82B3C9',      // 深雪白
-    container: '#F0F9FF', // 辅助色容器
-    'on-container': '#0D47A1', // 辅助色容器上的文字
+    DEFAULT: '#7EB8D8',
+    light: '#B8DFEF',
+    dark: '#4A8DAF',
+    container: '#E6F2F9',
+    'on-container': '#1A4A6B',
   },
-  // 第三色调 — 霜紫 (Tertiary)
+  // 第三色调 — 冰灰蓝 (Tertiary)
   tertiary: {
-    DEFAULT: '#CE93D8',   // 霜紫
-    light: '#FFC4FF',     // 浅霜紫
-    dark: '#9C64A6',      // 深霜紫
-    container: '#F3E5F5', // 第三色容器
-    'on-container': '#4A148C', // 第三色容器上的文字
+    DEFAULT: '#A8B4E0',
+    light: '#D0D8F0',
+    dark: '#7882B8',
+    container: '#E8ECF8',
+    'on-container': '#2D3A6B',
   },
-  // 表面色 (Surface)
+  // 表面色 — 清冷灰白
   surface: {
-    DEFAULT: '#FAFCFF',   // 主表面色（近白）
-    dim: '#D7DADD',       // 暗表面
-    bright: '#FFFFFF',    // 亮表面
+    DEFAULT: '#F7F9FC',
+    dim: '#D5DAE2',
+    bright: '#FFFFFF',
     'container-lowest': '#FFFFFF',
-    'container-low': '#F1F4F8',
-    container: '#EBF0F5',
-    'container-high': '#E5EAF0',
-    'container-highest': '#DFE4EA',
+    'container-low': '#F0F3F8',
+    container: '#E8ECF3',
+    'container-high': '#E0E5EE',
+    'container-highest': '#D8DEE8',
   },
-  // 功能色
   error: {
-    DEFAULT: '#BA1A1A',
+    DEFAULT: '#C62828',
     container: '#FFDAD6',
     'on-container': '#410002',
   },
-  // 轮廓色
   outline: {
-    DEFAULT: '#73777F',
-    variant: '#C3C7CF',
+    DEFAULT: '#6E7A87',
+    variant: '#B8C2CC',
   },
   // 降雪强度色彩
   snow: {
-    light: '#E3F2FD',     // 小雪 — 浅蓝
-    moderate: '#90CAF9',  // 中雪 — 中蓝
-    heavy: '#42A5F5',     // 大雪 — 深蓝
-    blizzard: '#1565C0',  // 暴雪 — 极深蓝
-    none: '#E0E0E0',      // 无雪 — 灰色
+    light: '#E3EFF8',
+    moderate: '#64B5F6',
+    heavy: '#1E88E5',
+    blizzard: '#1455A0',
+    none: '#B0BEC5',
   },
-  // 文字色
   'on-primary': '#FFFFFF',
-  'on-secondary': '#003258',
-  'on-surface': '#1A1C1E',
-  'on-surface-variant': '#43474E',
+  'on-secondary': '#0E3350',
+  'on-surface': '#1B1F26',
+  'on-surface-variant': '#414B57',
 }
 
 /**

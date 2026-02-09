@@ -1,5 +1,5 @@
 <template>
-  <view class="min-h-screen bg-surface">
+  <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
     <OfflineBanner />
 
     <view class="px-4 pt-4 pb-2">
@@ -85,6 +85,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import type { NearbySnowResult } from '@/models/types'
+import { getNavBarInfo } from '@/utils/navbar'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -96,6 +97,9 @@ const loading = ref(false)
 const loaded = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取附近降雪数据失败，请检查网络连接')
+
+const { totalHeight } = getNavBarInfo()
+const navPadding = `${totalHeight}px`
 
 function requestLocation() {
   loading.value = true

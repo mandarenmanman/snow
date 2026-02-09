@@ -56,7 +56,7 @@ const classes = computed(() => {
 
 const iconStyle = computed(() => {
   const s: Record<string, string> = {}
-  if (props.size) s['font-size'] = props.size
+  s['font-size'] = props.size || '20px'
   if (props.color) s['color'] = props.color
   return s
 })

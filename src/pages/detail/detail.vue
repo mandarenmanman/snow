@@ -1,14 +1,24 @@
 <template>
-  <view class="min-h-screen bg-surface">
-    <!-- 标题 + 收藏 -->
+  <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
+    <!-- 返回 + 收藏 -->
     <view class="px-4 pt-4 pb-2 flex items-center justify-between">
-      <view>
-        <text class="text-headline-md font-bold text-on-surface block">
-          {{ cityDetail ? cityDetail.cityName : '城市详情' }}
-        </text>
-        <text v-if="cityDetail" class="text-body-sm text-on-surface-variant block mt-1">
-          更新于 {{ formattedUpdatedAt }}
-        </text>
+      <view class="flex items-center flex-1">
+        <view
+          class="flex items-center justify-center rounded-full mr-3"
+          hover-class="hover-opacity-60"
+          style="width: 40px; height: 40px;"
+          @click="goBack"
+        >
+          <Icon name="arrow-left" size="20px" class="text-on-surface" />
+        </view>
+        <view>
+          <text class="text-headline-md font-bold text-on-surface block">
+            {{ cityDetail ? cityDetail.cityName : '城市详情' }}
+          </text>
+          <text v-if="cityDetail" class="text-body-sm text-on-surface-variant block mt-1">
+            更新于 {{ formattedUpdatedAt }}
+          </text>
+        </view>
       </view>
       <view
         v-if="cityDetail"
@@ -111,6 +121,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import type { CityDetail } from '@/models/types'
+import { getNavBarInfo } from '@/utils/navbar'
 import Icon from '@/components/Icon.vue'
 import ForecastItem from '@/components/ForecastItem.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
@@ -122,6 +133,9 @@ const loading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取城市详情失败，请检查网络连接')
 const isFavorited = ref(false)
+
+const { totalHeight } = getNavBarInfo()
+const navPadding = `${totalHeight}px`
 
 const formattedUpdatedAt = computed(() => {
   if (!cityDetail.value) return ''
@@ -168,6 +182,10 @@ const snowLevelTextClass = computed(() => {
     default: return 'text-on-surface-variant'
   }
 })
+
+function goBack() {
+  uni.navigateBack({ delta: 1 })
+}
 
 async function loadDetail() {
   if (!cityId.value) return

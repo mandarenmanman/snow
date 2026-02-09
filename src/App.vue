@@ -31,8 +31,8 @@ onHide(() => {
 <style>
 /* 全局样式 */
 page {
-  background-color: #f5f5f5;
+  background-color: #F7F9FC;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color: #1c1b1f;
+  color: #1B1F26;
 }
 </style>

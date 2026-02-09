@@ -1,5 +1,5 @@
 <template>
-  <view class="min-h-screen bg-surface">
+  <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
     <OfflineBanner />
 
     <!-- 搜索栏 -->
@@ -80,6 +80,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import type { City } from '@/models/types'
+import { getNavBarInfo } from '@/utils/navbar'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -92,6 +93,9 @@ const hasSearched = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('搜索失败，请检查网络连接')
 const autoFocus = ref(true)
+
+const { totalHeight } = getNavBarInfo()
+const navPadding = `${totalHeight}px`
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const DEBOUNCE_DELAY = 300
 

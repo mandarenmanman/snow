@@ -1,5 +1,5 @@
 <template>
-  <view class="min-h-screen bg-surface">
+  <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
     <OfflineBanner />
 
     <view class="px-4 pt-4 pb-2">
@@ -56,6 +56,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { getNavBarInfo } from '@/utils/navbar'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -67,6 +68,9 @@ const favorites = ref<FavoriteItem[]>([])
 const loading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取收藏列表失败，请检查网络连接')
+
+const { totalHeight } = getNavBarInfo()
+const navPadding = `${totalHeight}px`
 
 async function loadFavorites() {
   loading.value = true

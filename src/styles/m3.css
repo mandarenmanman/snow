@@ -20,40 +20,40 @@
   src: url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-regular-400.woff2') format('woff2');
 }
 
-/* ========== CSS 变量 — M3 色彩令牌 ========== */
+/* ========== CSS 变量 — M3 冰雪色彩令牌 ========== */
 page {
-  --color-primary: #4FC3F7;
-  --color-primary-light: #8BF6FF;
-  --color-primary-dark: #0093C4;
-  --color-primary-container: #E1F5FE;
-  --color-primary-on-container: #01579B;
-  --color-secondary: #B3E5FC;
-  --color-secondary-container: #F0F9FF;
-  --color-secondary-on-container: #0D47A1;
-  --color-tertiary: #CE93D8;
-  --color-tertiary-container: #F3E5F5;
-  --color-tertiary-on-container: #4A148C;
-  --color-surface: #FAFCFF;
-  --color-surface-dim: #D7DADD;
+  --color-primary: #5BA8F5;
+  --color-primary-light: #A0D0FF;
+  --color-primary-dark: #2979C1;
+  --color-primary-container: #DCEEFB;
+  --color-primary-on-container: #0B3D6E;
+  --color-secondary: #7EB8D8;
+  --color-secondary-container: #E6F2F9;
+  --color-secondary-on-container: #1A4A6B;
+  --color-tertiary: #A8B4E0;
+  --color-tertiary-container: #E8ECF8;
+  --color-tertiary-on-container: #2D3A6B;
+  --color-surface: #F7F9FC;
+  --color-surface-dim: #D5DAE2;
   --color-surface-bright: #FFFFFF;
   --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low: #F1F4F8;
-  --color-surface-container: #EBF0F5;
-  --color-surface-container-high: #E5EAF0;
-  --color-surface-container-highest: #DFE4EA;
-  --color-error: #BA1A1A;
+  --color-surface-container-low: #F0F3F8;
+  --color-surface-container: #E8ECF3;
+  --color-surface-container-high: #E0E5EE;
+  --color-surface-container-highest: #D8DEE8;
+  --color-error: #C62828;
   --color-error-container: #FFDAD6;
-  --color-outline: #73777F;
-  --color-outline-variant: #C3C7CF;
+  --color-outline: #6E7A87;
+  --color-outline-variant: #B8C2CC;
   --color-on-primary: #FFFFFF;
-  --color-on-secondary: #003258;
-  --color-on-surface: #1A1C1E;
-  --color-on-surface-variant: #43474E;
-  --color-snow-light: #E3F2FD;
-  --color-snow-moderate: #90CAF9;
-  --color-snow-heavy: #42A5F5;
-  --color-snow-blizzard: #1565C0;
-  --color-snow-none: #E0E0E0;
+  --color-on-secondary: #0E3350;
+  --color-on-surface: #1B1F26;
+  --color-on-surface-variant: #414B57;
+  --color-snow-light: #E3EFF8;
+  --color-snow-moderate: #64B5F6;
+  --color-snow-heavy: #1E88E5;
+  --color-snow-blizzard: #1455A0;
+  --color-snow-none: #B0BEC5;
 }
 
 /* ========== 布局 ========== */
@@ -70,10 +70,13 @@ page {
 .justify-end { justify-content: flex-end; }
 .min-w-0 { min-width: 0; }
 .overflow-hidden { overflow: hidden; }
+.overflow-x-auto { overflow-x: auto; white-space: nowrap; }
+.inline-flex { display: inline-flex; }
 .block { display: block; }
 
 /* ========== 宽度 ========== */
 .w-half { width: 50%; }
+.w-full { width: 100%; }
 
 /* ========== 间距 — padding ========== */
 .p-4 { padding: 16px; }
@@ -129,12 +132,12 @@ page {
 .bg-snow-none { background-color: var(--color-snow-none); }
 
 /* 带透明度的背景色 */
-.bg-snow-blizzard-10 { background-color: rgba(21, 101, 192, 0.1); }
-.bg-snow-blizzard-15 { background-color: rgba(21, 101, 192, 0.15); }
-.bg-snow-heavy-10 { background-color: rgba(66, 165, 245, 0.1); }
-.bg-snow-heavy-15 { background-color: rgba(66, 165, 245, 0.15); }
-.bg-snow-moderate-10 { background-color: rgba(144, 202, 249, 0.1); }
-.bg-snow-moderate-15 { background-color: rgba(144, 202, 249, 0.15); }
+.bg-snow-blizzard-10 { background-color: rgba(20, 85, 160, 0.1); }
+.bg-snow-blizzard-15 { background-color: rgba(20, 85, 160, 0.15); }
+.bg-snow-heavy-10 { background-color: rgba(30, 136, 229, 0.1); }
+.bg-snow-heavy-15 { background-color: rgba(30, 136, 229, 0.15); }
+.bg-snow-moderate-10 { background-color: rgba(100, 181, 246, 0.1); }
+.bg-snow-moderate-15 { background-color: rgba(100, 181, 246, 0.15); }
 
 /* ========== 文字色 ========== */
 .text-on-surface { color: var(--color-on-surface); }
@@ -178,12 +181,12 @@ page {
 /* ========== 边框 ========== */
 .border { border-width: 1px; border-style: solid; }
 .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
-.border-outline-variant-20 { border-color: rgba(195, 199, 207, 0.2); }
-.border-outline-variant-30 { border-color: rgba(195, 199, 207, 0.3); }
-.border-snow-blizzard-30 { border-color: rgba(21, 101, 192, 0.3); }
-.border-snow-heavy-30 { border-color: rgba(66, 165, 245, 0.3); }
-.border-snow-moderate-30 { border-color: rgba(144, 202, 249, 0.3); }
-.border-primary-light-30 { border-color: rgba(139, 246, 255, 0.3); }
+.border-outline-variant-20 { border-color: rgba(184, 194, 204, 0.2); }
+.border-outline-variant-30 { border-color: rgba(184, 194, 204, 0.3); }
+.border-snow-blizzard-30 { border-color: rgba(20, 85, 160, 0.3); }
+.border-snow-heavy-30 { border-color: rgba(30, 136, 229, 0.3); }
+.border-snow-moderate-30 { border-color: rgba(100, 181, 246, 0.3); }
+.border-primary-light-30 { border-color: rgba(160, 208, 255, 0.3); }
 .border-outline { border-color: var(--color-outline); }
 
 /* ========== 过渡动画 ========== */
@@ -211,3 +214,17 @@ page {
 .hover-elevation-2 { box-shadow: 0px 1px 2px rgba(0,0,0,0.3), 0px 2px 6px 2px rgba(0,0,0,0.15); }
 .hover-opacity-60 { opacity: 0.6; }
 .hover-opacity-80 { opacity: 0.8; }
+
+/* ========== 定位 ========== */
+.fixed { position: fixed; }
+.relative { position: relative; }
+.z-10 { z-index: 10; }
+
+/* ========== 间隔 ========== */
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+/* ========== 文字截断 ========== */
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whitespace-nowrap { white-space: nowrap; }
+.flex-shrink-0 { flex-shrink: 0; }

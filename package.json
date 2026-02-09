@@ -1,7 +1,7 @@
 {
   "name": "ximencuixue-snow-finder",
   "version": "1.0.0",
-  "description": "西门催雪 — 下雪查找小程序",
+  "description": "西门问雪 — 下雪查找小程序",
   "private": true,
   "type": "module",
   "scripts": {
