@@ -1,0 +1,10 @@
+{
+  "name": "syncCities",
+  "version": "1.0.0",
+  "description": "定时同步和风天气城市列表到 cities 集合",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "axios": "^1.6.0"
+  }
+}

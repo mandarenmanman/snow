@@ -7,6 +7,8 @@ cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
 })
 
+const db = cloud.database()
+
 /** 和风天气 API 密钥 */
 const API_KEY = 'f27d9b38adcf4a36a09f6b6ab6133fd7'
 
@@ -17,47 +19,39 @@ const REQUEST_TIMEOUT = 10000
 const WEATHER_API_BASE = 'https://nf5g7caymw.re.qweatherapi.com/v7'
 
 /**
- * 主要中国城市列表（用于全国降雪扫描）
- * 包含省会城市和主要地级市，覆盖全国各区域
- * location 为和风天气城市 ID
+ * 从数据库读取城市列表
+ * 集合: cities
+ *
+ * @param {Object} [filter] - 可选过滤条件，直接传给 where()
+ * @returns {Promise<Array>} 城市列表
  */
-const MAJOR_CITIES = [
-  { cityId: '101010100', cityName: '北京', province: '北京', latitude: 39.90, longitude: 116.41 },
-  { cityId: '101020100', cityName: '上海', province: '上海', latitude: 31.23, longitude: 121.47 },
-  { cityId: '101030100', cityName: '天津', province: '天津', latitude: 39.13, longitude: 117.20 },
-  { cityId: '101040100', cityName: '重庆', province: '重庆', latitude: 29.57, longitude: 106.55 },
-  { cityId: '101050101', cityName: '哈尔滨', province: '黑龙江', latitude: 45.75, longitude: 126.65 },
-  { cityId: '101050201', cityName: '齐齐哈尔', province: '黑龙江', latitude: 47.35, longitude: 123.97 },
-  { cityId: '101050301', cityName: '牡丹江', province: '黑龙江', latitude: 44.58, longitude: 129.63 },
-  { cityId: '101060101', cityName: '长春', province: '吉林', latitude: 43.88, longitude: 125.32 },
-  { cityId: '101060201', cityName: '吉林', province: '吉林', latitude: 43.84, longitude: 126.55 },
-  { cityId: '101070101', cityName: '沈阳', province: '辽宁', latitude: 41.80, longitude: 123.43 },
-  { cityId: '101070201', cityName: '大连', province: '辽宁', latitude: 38.91, longitude: 121.62 },
-  { cityId: '101080101', cityName: '呼和浩特', province: '内蒙古', latitude: 40.84, longitude: 111.75 },
-  { cityId: '101090101', cityName: '石家庄', province: '河北', latitude: 38.04, longitude: 114.51 },
-  { cityId: '101100101', cityName: '太原', province: '山西', latitude: 37.87, longitude: 112.55 },
-  { cityId: '101110101', cityName: '西安', province: '陕西', latitude: 34.26, longitude: 108.94 },
-  { cityId: '101120101', cityName: '济南', province: '山东', latitude: 36.65, longitude: 116.98 },
-  { cityId: '101130101', cityName: '乌鲁木齐', province: '新疆', latitude: 43.80, longitude: 87.60 },
-  { cityId: '101140101', cityName: '拉萨', province: '西藏', latitude: 29.65, longitude: 91.11 },
-  { cityId: '101150101', cityName: '西宁', province: '青海', latitude: 36.62, longitude: 101.78 },
-  { cityId: '101160101', cityName: '兰州', province: '甘肃', latitude: 36.06, longitude: 103.83 },
-  { cityId: '101170101', cityName: '银川', province: '宁夏', latitude: 38.49, longitude: 106.23 },
-  { cityId: '101180101', cityName: '郑州', province: '河南', latitude: 34.76, longitude: 113.65 },
-  { cityId: '101190101', cityName: '南京', province: '江苏', latitude: 32.06, longitude: 118.80 },
-  { cityId: '101200101', cityName: '武汉', province: '湖北', latitude: 30.58, longitude: 114.30 },
-  { cityId: '101210101', cityName: '杭州', province: '浙江', latitude: 30.29, longitude: 120.15 },
-  { cityId: '101220101', cityName: '合肥', province: '安徽', latitude: 31.82, longitude: 117.23 },
-  { cityId: '101230101', cityName: '福州', province: '福建', latitude: 26.08, longitude: 119.30 },
-  { cityId: '101240101', cityName: '南昌', province: '江西', latitude: 28.68, longitude: 115.89 },
-  { cityId: '101250101', cityName: '长沙', province: '湖南', latitude: 28.23, longitude: 112.94 },
-  { cityId: '101260101', cityName: '贵阳', province: '贵州', latitude: 26.65, longitude: 106.63 },
-  { cityId: '101270101', cityName: '成都', province: '四川', latitude: 30.57, longitude: 104.07 },
-  { cityId: '101280101', cityName: '广州', province: '广东', latitude: 23.13, longitude: 113.26 },
-  { cityId: '101290101', cityName: '昆明', province: '云南', latitude: 25.04, longitude: 102.68 },
-  { cityId: '101300101', cityName: '南宁', province: '广西', latitude: 22.82, longitude: 108.37 },
-  { cityId: '101310101', cityName: '海口', province: '海南', latitude: 20.04, longitude: 110.35 },
-]
+async function loadCitiesFromDB(filter) {
+  const MAX_LIMIT = 100
+  let allCities = []
+  let offset = 0
+
+  // 分页读取，云数据库单次最多 100 条
+  while (true) {
+    let query = db.collection('cities')
+    if (filter) query = query.where(filter)
+    const { data } = await query.skip(offset).limit(MAX_LIMIT).get()
+
+    allCities = allCities.concat(data)
+    if (data.length < MAX_LIMIT) break
+    offset += MAX_LIMIT
+  }
+
+  return allCities.map((c) => ({
+    cityId: c.cityId,
+    cityName: c.cityName,
+    province: c.province || '',
+    latitude: c.latitude || 0,
+    longitude: c.longitude || 0,
+    isHot: c.isHot || false,
+    isShow: c.isShow !== false,
+    scenics: c.scenics || [],
+  }))
+}
 
 /**
  * 将和风天气天气代码映射为降雪等级
@@ -121,15 +115,20 @@ async function fetchForecast3d(cityId) {
 }
 
 /**
- * 处理 list action：获取全国降雪城市列表
- *
- * 遍历主要城市，查询实时天气，过滤出正在下雪的城市。
- * 使用 Promise.allSettled 并发请求，容忍部分城市请求失败。
- *
- * @returns {Promise<Object>} 降雪城市列表响应
+ * 处理 cities action：返回前端展示的城市列表（isShow === true）
+ */
+async function handleCitiesAction() {
+  const cities = await loadCitiesFromDB({ isShow: true })
+  return { cities }
+}
+
+/**
+ * 处理 list action：获取前端展示城市的实时天气
  */
 async function handleListAction() {
-  const weatherPromises = MAJOR_CITIES.map(async (city) => {
+  const cities = await loadCitiesFromDB({ isShow: true })
+
+  const weatherPromises = cities.map(async (city) => {
     try {
       const weatherNow = await fetchCurrentWeather(city.cityId)
       const snowLevel = mapWeatherCodeToSnowLevel(weatherNow.icon)
@@ -139,6 +138,9 @@ async function handleListAction() {
         cityName: city.cityName,
         province: city.province,
         temperature: Number(weatherNow.temp),
+        humidity: Number(weatherNow.humidity),
+        windSpeed: Number(weatherNow.windSpeed),
+        windDirection: weatherNow.windDir || '',
         snowLevel,
         latitude: city.latitude,
         longitude: city.longitude,
@@ -152,11 +154,10 @@ async function handleListAction() {
 
   const results = await Promise.allSettled(weatherPromises)
 
-  // 收集成功的结果并过滤出正在下雪的城市
+  // 收集成功的结果
   const snowRegions = results
     .filter((r) => r.status === 'fulfilled' && r.value !== null)
     .map((r) => r.value)
-    .filter((region) => region.snowLevel !== '无')
 
   return {
     snowRegions,
@@ -258,7 +259,10 @@ exports.main = async (event, context) => {
   const { action, cityId } = event
 
   try {
-    if (action === 'list') {
+    if (action === 'cities') {
+      const data = await handleCitiesAction()
+      return { code: 0, data }
+    } else if (action === 'list') {
       const data = await handleListAction()
       return {
         code: 0,

@@ -1,0 +1,1 @@
+https://github.com/qwd/LocationList/blob/master/China-City-List-latest.csv

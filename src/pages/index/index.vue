@@ -153,11 +153,11 @@ import type { SnowRegion } from '@/models/types'
 import { fetchSnowRegions, filterSnowingCities } from '@/services/snow-service'
 import { forceRefresh } from '@/utils/cache'
 import { getNavBarInfo } from '@/utils/navbar'
-import { getScenics } from '@/models/scenics'
+import { getScenics, loadCityList, getHotCities } from '@/models/scenics'
+import type { CityInfo } from '@/models/scenics'
 import Icon from '@/components/Icon.vue'
 import SnowCard from '@/components/SnowCard.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
-import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
 const allRegions = ref<SnowRegion[]>([])
@@ -170,40 +170,15 @@ const cityImages = ref<Record<string, string>>({})
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
 
-/** 图片缓存键前缀 */
-const IMG_CACHE_PREFIX = 'city_img_'
+/** 热门城市基础信息（从 DB 加载） */
+const hotCityInfos = ref<CityInfo[]>([])
 
-/** 每个城市的标志性景点 prompt */
-const CITY_PROMPTS: Record<string, string> = {
-  '101010100': '北京故宫太和殿雪景，冬日白雪覆盖金色琉璃瓦，摄影作品风格',
-  '101190101': '南京中山陵雪景，白雪覆盖台阶和松柏，冬日宁静氛围',
-  '101210101': '杭州西湖断桥残雪，远山含黛湖面如镜，中国水墨画风格',
-  '101180101': '河南少林寺雪景，古刹红墙白雪，禅意冬日',
-  '101200101': '武汉黄鹤楼雪景，飞檐翘角覆盖白雪，长江远景',
-  '101280101': '广州白云山冬日风光，云雾缭绕山峦叠翠',
-  '101040100': '重庆洪崖洞夜景雪景，吊脚楼灯火辉煌覆盖薄雪',
-  '101270101': '成都宽窄巷子雪景，青砖灰瓦白雪，川西民居风格',
-  '101230101': '福州三坊七巷冬日，白墙灰瓦马头墙，古巷幽深',
-  '101120101': '济南趵突泉冬日雪景，泉水蒸腾白雪皑皑',
-  '101070101': '沈阳故宫雪景，红墙金瓦白雪覆盖，满清皇家建筑',
-  '101050101': '哈尔滨冰雪大世界，冰雕城堡五彩灯光，梦幻冬夜',
+/** 每个城市的标志性景点 prompt（动态生成） */
+function getCityPrompt(cityId: string, cityName: string): string {
+  const scenics = getScenics(cityId)
+  const spot = scenics.length > 0 ? scenics[0] : cityName
+  return `${cityName}${spot}雪景，冬日白雪覆盖，摄影作品风格，高清`
 }
-
-/** 热门旅游城市 ID 列表 */
-const HOT_CITY_IDS = [
-  '101010100', // 北京
-  '101190101', // 南京
-  '101210101', // 杭州
-  '101180101', // 郑州
-  '101200101', // 武汉
-  '101280101', // 广州
-  '101040100', // 重庆
-  '101270101', // 成都
-  '101230101', // 福州
-  '101120101', // 济南
-  '101070101', // 沈阳
-  '101050101', // 哈尔滨
-]
 
 /** 生成日期选项：今天 + 未来 3 天 */
 const dateOptions = computed(() => {
@@ -222,23 +197,20 @@ const dateOptions = computed(() => {
   return options
 })
 
-/** 热门城市数据（从全量数据中筛选，未命中的用默认值补齐） */
+/** 图片缓存键前缀 */
+const IMG_CACHE_PREFIX = 'city_img_'
+
+/** 热门城市数据（从 DB 城市列表 + 天气数据合并） */
 const hotCities = computed(() => {
-  const defaultHotCities: Record<string, string> = {
-    '101010100': '北京', '101190101': '南京', '101210101': '杭州',
-    '101180101': '郑州', '101200101': '武汉', '101280101': '广州',
-    '101040100': '重庆', '101270101': '成都', '101230101': '福州',
-    '101120101': '济南', '101070101': '沈阳', '101050101': '哈尔滨',
-  }
-  return HOT_CITY_IDS.map((id) => {
-    const found = allRegions.value.find((r: SnowRegion) => r.cityId === id)
+  return hotCityInfos.value.map((info) => {
+    const found = allRegions.value.find((r: SnowRegion) => r.cityId === info.cityId)
     if (found) return found
     return {
-      cityId: id,
-      cityName: defaultHotCities[id] || id,
-      province: '',
-      latitude: 0,
-      longitude: 0,
+      cityId: info.cityId,
+      cityName: info.cityName,
+      province: info.province,
+      latitude: info.latitude,
+      longitude: info.longitude,
       temperature: 0,
       humidity: 0,
       windSpeed: 0,
@@ -307,7 +279,7 @@ function getSnowBadgeBg(level: string): string {
 /**
  * 获取城市景区图片（优先读缓存，没有则调用 AI 生成）
  */
-async function loadCityImage(cityId: string) {
+async function loadCityImage(cityId: string, cityName: string) {
   // 已有图片，跳过
   if (cityImages.value[cityId]) return
 
@@ -322,8 +294,7 @@ async function loadCityImage(cityId: string) {
   } catch {}
 
   // 没有缓存，调用云函数生成
-  const prompt = CITY_PROMPTS[cityId]
-  if (!prompt) return
+  const prompt = getCityPrompt(cityId, cityName)
 
   try {
     // #ifdef MP-WEIXIN
@@ -345,8 +316,8 @@ async function loadCityImage(cityId: string) {
 
 /** 批量加载所有热门城市图片（逐个请求，避免并发过高） */
 async function loadAllCityImages() {
-  for (const id of HOT_CITY_IDS) {
-    await loadCityImage(id)
+  for (const info of hotCityInfos.value) {
+    await loadCityImage(info.cityId, info.cityName)
   }
 }
 
@@ -403,8 +374,12 @@ function onFabClick() {
   uni.navigateTo({ url: '/pages/search/search' })
 }
 
-onLoad(() => {
+onLoad(async () => {
   selectedDate.value = dateOptions.value[0]?.value ?? ''
+  // 先从 DB 加载城市列表
+  await loadCityList()
+  hotCityInfos.value = getHotCities()
+  // 再加载天气数据和图片
   loadData()
   loadAllCityImages()
 })
