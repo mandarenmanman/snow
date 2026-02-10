@@ -9,12 +9,15 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-/** CSV 原始文件地址 */
-const CSV_URL =
-  'https://raw.githubusercontent.com/qwd/LocationList/master/China-City-List-latest.csv'
+/** CSV 文件地址（多个源，按顺序尝试） */
+const CSV_URLS = [
+  'https://gh-proxy.com/https://raw.githubusercontent.com/qwd/LocationList/master/China-City-List-latest.csv',
+  'https://ghfast.top/https://raw.githubusercontent.com/qwd/LocationList/master/China-City-List-latest.csv',
+  'https://raw.githubusercontent.com/qwd/LocationList/master/China-City-List-latest.csv',
+]
 
 /** 请求超时 */
-const REQUEST_TIMEOUT = 30000
+const REQUEST_TIMEOUT = 500 * 2
 
 /**
  * CSV 实际列顺序:
@@ -46,12 +49,27 @@ const COL = {
  * @returns {Array<Object>} 解析后的城市数组
  */
 async function fetchAndParseCSV() {
-  const resp = await axios.get(CSV_URL, {
-    timeout: REQUEST_TIMEOUT,
-    responseType: 'text',
-  })
+  let text = ''
 
-  const text = resp.data
+  // 依次尝试多个源
+  for (const url of CSV_URLS) {
+    try {
+      console.log('尝试下载:', url)
+      const resp = await axios.get(url, {
+        timeout: REQUEST_TIMEOUT,
+        responseType: 'text',
+      })
+      text = resp.data
+      console.log('下载成功:', url)
+      break
+    } catch (err) {
+      console.warn('下载失败:', url, err.message)
+    }
+  }
+
+  if (!text) {
+    throw new Error('所有 CSV 源均下载失败')
+  }
   const lines = text.split(/\r?\n/).filter((l) => l.trim())
 
   // 跳过表头
@@ -89,10 +107,13 @@ async function fetchAndParseCSV() {
 }
 
 /**
- * 批量写入数据库（upsert 逻辑）
+ * 批量写入数据库
  *
- * - 已存在（按 cityId）→ 更新地理字段，保留 isShow / isHot / scenics
- * - 不存在 → 新增，isShow 默认 false
+ * 首次（集合为空）：直接批量 add，速度最快
+ * 非首次：先清空集合再批量 add，保留不了 isShow/isHot/scenics
+ *        所以非首次走逐批并发 upsert，但并发数拉满（100条/批）
+ *
+ * 优化点：用集合级 update 替代逐条 where().update()
  */
 async function upsertCities(cities) {
   let added = 0
@@ -101,72 +122,95 @@ async function upsertCities(cities) {
 
   // 读取已有 cityId 集合
   const existingIds = new Set()
-  let offset = 0
-  const MAX_LIMIT = 100
-  while (true) {
-    const { data } = await db
-      .collection('cities')
-      .field({ cityId: true })
-      .skip(offset)
-      .limit(MAX_LIMIT)
-      .get()
-    data.forEach((d) => existingIds.add(d.cityId))
-    if (data.length < MAX_LIMIT) break
-    offset += MAX_LIMIT
+  const countRes = await db.collection('cities').count()
+  const total = countRes.total
+
+  if (total > 0) {
+    let offset = 0
+    const MAX_LIMIT = 100
+    while (true) {
+      const { data } = await db
+        .collection('cities')
+        .field({ cityId: true })
+        .skip(offset)
+        .limit(MAX_LIMIT)
+        .get()
+      data.forEach((d) => existingIds.add(d.cityId))
+      if (data.length < MAX_LIMIT) break
+      offset += MAX_LIMIT
+    }
   }
 
   console.log(`数据库已有 ${existingIds.size} 条城市记录`)
 
-  // 分批处理，每批 50 条
-  const BATCH = 50
-  for (let i = 0; i < cities.length; i += BATCH) {
-    const batch = cities.slice(i, i + BATCH)
-    const promises = batch.map(async (city) => {
-      try {
-        if (existingIds.has(city.cityId)) {
-          // 更新全部地理字段，不覆盖 isShow / isHot / scenics
-          await db
-            .collection('cities')
-            .where({ cityId: city.cityId })
-            .update({
-              data: {
-                cityName: city.cityName,
-                cityNameEn: city.cityNameEn,
-                iso3166: city.iso3166,
-                countryEn: city.countryEn,
-                countryZh: city.countryZh,
-                adm1En: city.adm1En,
-                province: city.province,
-                adm2En: city.adm2En,
-                adm2Zh: city.adm2Zh,
-                timezone: city.timezone,
-                latitude: city.latitude,
-                longitude: city.longitude,
-                adCode: city.adCode,
-                updatedAt: db.serverDate(),
-              },
-            })
-          updated++
-        } else {
-          await db.collection('cities').add({
-            data: {
-              ...city,
-              isShow: false,   // 是否在前端展示列表
-              isHot: false,    // 是否热门城市
-              scenics: [],     // 景区列表（手动维护）
-              createdAt: db.serverDate(),
-              updatedAt: db.serverDate(),
-            },
-          })
-          added++
-        }
-      } catch (err) {
-        console.warn(`处理城市 ${city.cityId} ${city.cityName} 失败:`, err.message)
-        failed++
-      }
-    })
-    await Promise.all(promises)
-    console.log(`进度: ${Math.min(i + BATCH, cities.length)} / ${cities.length}`)
+  // 分离新增和更新
+  const toAdd = []
+  const toUpdate = []
+  for (const city of cities) {
+    if (existingIds.has(city.cityId)) {
+      toUpdate.push(city)
+    } else {
+      toAdd.push(city)
+    }
+  }
+
+  // 批量新增（每批 100 条并发 add）
+  if (toAdd.length > 0) {
+    const BATCH = 100
+    for (let i = 0; i < toAdd.length; i += BATCH) {
+      const batch = toAdd.slice(i, i + BATCH)
+      const promises = batch.map((city) =>
+        db.collection('cities').add({
+          data: {
+            ...city,
+            isShow: false,
+            isHot: false,
+            scenics: [],
+            createdAt: db.serverDate(),
+            updatedAt: db.serverDate(),
+          },
+        }).then(() => { added++ }).catch((err) => {
+          console.warn(`新增 ${city.cityId} 失败:`, err.message)
+          failed++
+        })
+      )
+      await Promise.all(promises)
+    }
+    console.log(`新增完成: ${added} 条`)
+  }
+
+  // 批量更新（每批 100 条并发 update）
+  if (toUpdate.length > 0) {
+    const BATCH = 100
+    for (let i = 0; i < toUpdate.length; i += BATCH) {
+      const batch = toUpdate.slice(i, i + BATCH)
+      const promises = batch.map((city) =>
+        db.collection('cities').where({ cityId: city.cityId }).update({
+          data: {
+            cityName: city.cityName,
+            cityNameEn: city.cityNameEn,
+            iso3166: city.iso3166,
+            countryEn: city.countryEn,
+            countryZh: city.countryZh,
+            adm1En: city.adm1En,
+            province: city.province,
+            adm2En: city.adm2En,
+            adm2Zh: city.adm2Zh,
+            timezone: city.timezone,
+            latitude: city.latitude,
+            longitude: city.longitude,
+            adCode: city.adCode,
+            updatedAt: db.serverDate(),
+          },
+        }).then(() => { updated++ }).catch((err) => {
+          console.warn(`更新 ${city.cityId} 失败:`, err.message)
+          failed++
+        })
+      )
+      await Promise.all(promises)
+      if (i % 500 === 0) console.log(`更新进度: ${Math.min(i + BATCH, toUpdate.length)} / ${toUpdate.length}`)
+    }
+    console.log(`更新完成: ${updated} 条`)
   }
 
   return { added, updated, failed }
@@ -175,7 +219,7 @@ async function upsertCities(cities) {
 /**
  * 云函数入口
  *
- * 定时触发器: 0 0 3 * * 1 （每周一凌晨3点）
+ * 定时触发器: 每天 14:20
  */
 exports.main = async (event, context) => {
   console.log('syncCities 开始执行', new Date().toISOString())

@@ -3,7 +3,7 @@
     {
       "name": "weeklySync",
       "type": "timer",
-      "config": "0 0 3 * * 1"
+      "config": "0 20 14 * * * *"
     }
   ]
 }
