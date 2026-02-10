@@ -99,14 +99,15 @@ async function handleListAction(openId) {
  * @param {string} event.action - 操作类型: "add" | "remove" | "list"
  * @param {string} [event.cityId] - 城市 ID（add/remove 必填）
  * @param {string} [event.cityName] - 城市名称（add 必填）
- * @param {string} event.openId - 用户 OpenID
  */
 exports.main = async (event, context) => {
-  const { action, cityId, cityName, openId } = event
+  const { action, cityId, cityName } = event
+  const wxContext = cloud.getWXContext()
+  const openId = wxContext.OPENID
 
   try {
     if (!openId) {
-      return { code: 400, message: '缺少 openId 参数' }
+      return { code: 401, message: '无法获取用户身份' }
     }
 
     if (action === 'add') {

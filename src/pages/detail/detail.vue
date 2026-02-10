@@ -16,7 +16,7 @@
             {{ cityDetail ? cityDetail.cityName : '城市详情' }}
           </text>
           <text v-if="cityDetail" class="text-body-sm text-on-surface-variant block mt-1">
-            更新于 {{ formattedUpdatedAt }}
+            {{ province ? province + ' · ' : '' }}更新于 {{ formattedUpdatedAt }}
           </text>
         </view>
       </view>
@@ -113,6 +113,21 @@
         </view>
         <EmptyState v-else message="预报数据更新中，请稍后再试" icon="cloud" />
       </view>
+
+      <!-- 热门景区 -->
+      <view v-if="scenics.length > 0" class="mb-4">
+        <text class="text-title-md text-on-surface block mb-3">热门景区</text>
+        <view class="flex flex-wrap">
+          <view
+            v-for="spot in scenics"
+            :key="spot"
+            class="rounded-full bg-primary-container px-4 py-2 mr-2 mb-2 flex items-center"
+          >
+            <Icon name="location-dot" size="14px" class="text-primary-on-container mr-2" />
+            <text class="text-label-lg text-primary-on-container">{{ spot }}</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -122,6 +137,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import type { CityDetail } from '@/models/types'
 import { getNavBarInfo } from '@/utils/navbar'
+import { getScenics, getProvince } from '@/models/scenics'
 import Icon from '@/components/Icon.vue'
 import ForecastItem from '@/components/ForecastItem.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
@@ -136,6 +152,9 @@ const isFavorited = ref(false)
 
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
+
+const province = computed(() => getProvince(cityId.value))
+const scenics = computed(() => getScenics(cityId.value))
 
 const formattedUpdatedAt = computed(() => {
   if (!cityDetail.value) return ''
@@ -215,7 +234,7 @@ async function checkFavoriteStatus() {
   if (!cityId.value) return
   try {
     // #ifdef MP-WEIXIN
-    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list', openId: '' } })
+    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
     const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string }> } }
     const favs = (result.code === 0 && result.data?.favorites) ? result.data.favorites : []
     isFavorited.value = favs.some((fav) => fav.cityId === cityId.value)
@@ -229,7 +248,7 @@ async function toggleFavorite() {
     // #ifdef MP-WEIXIN
     await wx.cloud.callFunction({
       name: 'manageFavorites',
-      data: { action, cityId: cityId.value, cityName: cityDetail.value?.cityName ?? '', openId: '' },
+      data: { action, cityId: cityId.value, cityName: cityDetail.value?.cityName ?? '' },
     })
     // #endif
     isFavorited.value = !isFavorited.value

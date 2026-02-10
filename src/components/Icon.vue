@@ -37,6 +37,7 @@ const solidMap: Record<string, string> = {
   'circle-exclamation': '\uf06a',
   'arrows-rotate': '\uf021',
   'chevron-right': '\uf054',
+  'arrow-left': '\uf060',
 }
 
 const regularMap: Record<string, string> = {

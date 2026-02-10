@@ -4,7 +4,7 @@
 
     <view class="px-4 pt-4 pb-2">
       <text class="text-headline-md font-bold text-on-surface block">我的收藏</text>
-      <text class="text-body-md text-on-surface-variant block mt-1">关注城市的降雪状态</text>
+      <text class="text-body-md text-on-surface-variant block mt-1">{{ favorites.length > 0 ? `已收藏 ${favorites.length} 个城市` : '关注城市的降雪状态' }}</text>
     </view>
 
     <view v-if="loading" class="flex flex-col items-center justify-center py-12">
@@ -19,33 +19,58 @@
     <EmptyState v-else-if="favorites.length === 0" message="还没有收藏城市，去首页或搜索页添加吧" icon="star" />
 
     <view v-else class="px-4 pb-6">
-      <view class="flex items-center justify-between mb-3">
-        <text class="text-title-md text-on-surface">已收藏（{{ favorites.length }}）</text>
-      </view>
       <view
         v-for="item in favorites"
         :key="item.cityId"
-        class="rounded-3xl shadow-elevation-1 p-4 mb-3 transition-all duration-200 bg-surface-container border border-outline-variant-30"
+        class="rounded-3xl bg-surface-container shadow-elevation-1 overflow-hidden mb-3 transition-all duration-200"
         hover-class="hover-elevation-2"
         @click="onFavoriteClick(item)"
       >
-        <view class="flex items-center justify-between">
-          <view class="flex items-center">
-            <view class="rounded-full bg-primary-container flex items-center justify-center mr-3" style="width: 40px; height: 40px;">
-              <Icon name="star" size="18px" class="text-primary-on-container" />
-            </view>
-            <view>
-              <text class="text-title-lg text-on-surface block">{{ item.cityName }}</text>
-              <text class="text-body-sm text-on-surface-variant block mt-1">
-                降雪状态：{{ item.snowStatus || '未知' }}
-              </text>
-            </view>
+        <!-- 景区图片 -->
+        <view class="relative" style="height: 120px;">
+          <image
+            v-if="cityImages[item.cityId]"
+            :src="cityImages[item.cityId]"
+            mode="aspectFill"
+            style="width: 100%; height: 120px;"
+          />
+          <view v-else class="flex items-center justify-center bg-surface-container-high" style="width: 100%; height: 120px;">
+            <Icon name="star" size="28px" class="text-outline-variant" />
           </view>
-          <view class="px-3 py-1 rounded-full flex items-center" :class="getSnowBadgeClass(item.snowStatus)">
-            <Icon name="snowflake" size="12px" class="mr-1" :class="getSnowIconClass(item.snowStatus)" />
-            <text class="text-label-sm" :class="getSnowTextClass(item.snowStatus)">
-              {{ item.snowStatus || '未知' }}
-            </text>
+          <!-- 降雪角标 -->
+          <view
+            v-if="item.snowStatus && item.snowStatus !== '无' && item.snowStatus !== '未知'"
+            class="px-3 py-1 rounded-full"
+            :class="getSnowBadgeBg(item.snowStatus)"
+            style="position: absolute; top: 10px; right: 10px;"
+          >
+            <text class="text-label-sm text-white">{{ item.snowStatus }}</text>
+          </view>
+          <!-- 取消收藏 -->
+          <view
+            class="rounded-full flex items-center justify-center"
+            style="position: absolute; top: 10px; left: 10px; width: 32px; height: 32px; background: rgba(0,0,0,0.3);"
+            hover-class="hover-opacity-60"
+            @click.stop="onRemove(item)"
+          >
+            <Icon name="xmark" size="14px" class="text-white" />
+          </view>
+        </view>
+        <!-- 信息区 -->
+        <view class="px-4 py-3">
+          <view class="flex items-center justify-between">
+            <view class="flex-1 min-w-0">
+              <text class="text-title-md text-on-surface">{{ item.cityName }}</text>
+              <text v-if="getProvince(item.cityId)" class="text-body-sm text-on-surface-variant ml-2">{{ getProvince(item.cityId) }}</text>
+            </view>
+            <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
+          </view>
+          <view v-if="getScenics(item.cityId).length > 0" class="flex flex-wrap mt-2">
+            <text
+              v-for="spot in getScenics(item.cityId)"
+              :key="spot"
+              class="text-label-sm text-primary mr-2 mb-1 px-2 py-0-5 rounded-full bg-primary-container"
+            >{{ spot }}</text>
           </view>
         </view>
       </view>
@@ -57,6 +82,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getNavBarInfo } from '@/utils/navbar'
+import { getScenics, getProvince } from '@/models/scenics'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -65,6 +91,7 @@ import OfflineBanner from '@/components/OfflineBanner.vue'
 interface FavoriteItem { cityId: string; cityName: string; snowStatus: string }
 
 const favorites = ref<FavoriteItem[]>([])
+const cityImages = ref<Record<string, string>>({})
 const loading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取收藏列表失败，请检查网络连接')
@@ -72,18 +99,27 @@ const errorMessage = ref('获取收藏列表失败，请检查网络连接')
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
 
+const IMG_CACHE_PREFIX = 'city_img_'
+
 async function loadFavorites() {
   loading.value = true
   hasError.value = false
   try {
     // #ifdef MP-WEIXIN
-    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list', openId: '' } })
+    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
     const result = res.result as { code?: number; data?: { favorites?: FavoriteItem[] } }
     favorites.value = result.data?.favorites ?? []
     // #endif
     // #ifndef MP-WEIXIN
     favorites.value = []
     // #endif
+    // 加载已缓存的图片
+    for (const item of favorites.value) {
+      try {
+        const cached = uni.getStorageSync(IMG_CACHE_PREFIX + item.cityId)
+        if (cached) cityImages.value[item.cityId] = cached
+      } catch {}
+    }
   } catch (err) {
     hasError.value = true
     errorMessage.value = '获取收藏列表失败，请检查网络连接'
@@ -96,33 +132,35 @@ function onFavoriteClick(item: FavoriteItem) {
   uni.navigateTo({ url: `/pages/detail/detail?cityId=${item.cityId}` })
 }
 
-function getSnowBadgeClass(s: string): string {
-  switch (s) {
-    case '暴雪': return 'bg-snow-blizzard-15'
-    case '大雪': return 'bg-snow-heavy-15'
-    case '中雪': return 'bg-snow-moderate-15'
-    case '小雪': return 'bg-primary-container'
-    default: return 'bg-surface-container-high'
-  }
+async function onRemove(item: FavoriteItem) {
+  uni.showModal({
+    title: '取消收藏',
+    content: `确定取消收藏「${item.cityName}」吗？`,
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        // #ifdef MP-WEIXIN
+        await wx.cloud.callFunction({
+          name: 'manageFavorites',
+          data: { action: 'remove', cityId: item.cityId },
+        })
+        // #endif
+        favorites.value = favorites.value.filter((f) => f.cityId !== item.cityId)
+        uni.showToast({ title: '已取消收藏', icon: 'success', duration: 1500 })
+      } catch {
+        uni.showToast({ title: '操作失败', icon: 'none', duration: 1500 })
+      }
+    },
+  })
 }
 
-function getSnowIconClass(s: string): string {
-  switch (s) {
-    case '暴雪': return 'text-snow-blizzard'
-    case '大雪': return 'text-snow-heavy'
-    case '中雪': return 'text-snow-moderate'
-    case '小雪': return 'text-primary'
-    default: return 'text-snow-none'
-  }
-}
-
-function getSnowTextClass(s: string): string {
-  switch (s) {
-    case '暴雪': return 'text-snow-blizzard'
-    case '大雪': return 'text-snow-heavy'
-    case '中雪': return 'text-snow-moderate'
-    case '小雪': return 'text-primary'
-    default: return 'text-on-surface-variant'
+function getSnowBadgeBg(level: string): string {
+  switch (level) {
+    case '暴雪': return 'bg-snow-blizzard'
+    case '大雪': return 'bg-snow-heavy'
+    case '中雪': return 'bg-snow-moderate'
+    case '小雪': return 'bg-primary'
+    default: return 'bg-snow-none'
   }
 }
 

@@ -20,6 +20,15 @@
   src: url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-regular-400.woff2') format('woff2');
 }
 
+/* ========== 和风天气图标 — QWeather Icons Webfont ========== */
+@font-face {
+  font-family: 'qweather-icons';
+  font-style: normal;
+  font-weight: normal;
+  font-display: block;
+  src: url('https://cdn.jsdelivr.net/npm/qweather-icons@1.8.0/font/qweather-icons.woff2') format('woff2');
+}
+
 /* ========== CSS 变量 — M3 冰雪色彩令牌 ========== */
 page {
   --color-primary: #5BA8F5;
@@ -151,6 +160,7 @@ page {
 .text-snow-heavy { color: var(--color-snow-heavy); }
 .text-snow-moderate { color: var(--color-snow-moderate); }
 .text-snow-none { color: var(--color-snow-none); }
+.text-outline-variant { color: var(--color-outline-variant); }
 .text-center { text-align: center; }
 
 /* ========== 字体大小 — M3 Type Scale ========== */

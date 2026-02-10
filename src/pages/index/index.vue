@@ -57,37 +57,62 @@
       <!-- 热门旅游城市 -->
       <view class="px-4 mb-4" style="padding-bottom: 180px;">
         <text class="text-title-md text-on-surface block mb-3">热门旅游城市</text>
-        <view class="flex flex-col gap-2">
+        <view class="flex flex-col gap-3">
           <view
             v-for="city in hotCities"
             :key="city.cityId"
-            class="rounded-3xl bg-surface-container shadow-elevation-1 px-4 py-3 transition-all duration-200"
+            class="rounded-3xl bg-surface-container shadow-elevation-1 overflow-hidden transition-all duration-200"
             hover-class="hover-elevation-2"
             @click="onHotCityClick(city)"
           >
-            <view class="flex items-center">
-              <Icon
-                name="snowflake"
-                size="18px"
-                class="mr-3 flex-shrink-0"
-                :class="city.snowLevel !== '无' ? 'text-primary' : 'text-snow-none'"
+            <!-- 景区图片 -->
+            <view class="relative" style="height: 140px;">
+              <image
+                v-if="cityImages[city.cityId]"
+                :src="cityImages[city.cityId]"
+                mode="aspectFill"
+                style="width: 100%; height: 140px;"
               />
-              <view class="flex-1 min-w-0">
-                <text class="text-title-sm text-on-surface truncate">{{ city.cityName }}</text>
+              <view v-else class="flex items-center justify-center bg-surface-container-high" style="width: 100%; height: 140px;">
+                <Icon name="snowflake" size="32px" class="text-outline-variant animate-spin" />
               </view>
-              <text class="text-body-sm text-on-surface-variant mr-3">{{ city.temperature }}°C</text>
-              <view v-if="city.snowLevel !== '无'" class="px-2 py-0-5 rounded-full" :class="getSnowBadgeBg(city.snowLevel)">
+              <!-- 降雪状态角标 -->
+              <view
+                v-if="city.snowLevel !== '无'"
+                class="px-3 py-1 rounded-full"
+                :class="getSnowBadgeBg(city.snowLevel)"
+                style="position: absolute; top: 12px; right: 12px;"
+              >
                 <text class="text-label-sm text-white">{{ city.snowLevel }}</text>
               </view>
-              <text v-else class="text-body-sm text-snow-none">无雪</text>
-              <Icon name="chevron-right" size="14px" class="text-on-surface-variant ml-2" />
             </view>
-            <view v-if="getScenics(city.cityId).length > 0" class="flex flex-wrap mt-2" style="margin-left: 38px;">
-              <text
-                v-for="spot in getScenics(city.cityId)"
-                :key="spot"
-                class="text-label-sm text-primary mr-2 mb-1 px-2 py-0-5 rounded-full bg-primary-container"
-              >{{ spot }}</text>
+            <!-- 城市信息 -->
+            <view class="px-4 py-3">
+              <view class="flex items-center justify-between mb-2">
+                <text class="text-title-md text-on-surface">{{ city.cityName }}</text>
+                <view class="flex items-center">
+                  <text class="text-title-md font-bold text-on-surface">{{ city.temperature }}°C</text>
+                  <view class="flex items-center ml-3">
+                    <Icon name="droplet" size="12px" class="text-on-surface-variant mr-1" />
+                    <text class="text-body-sm text-on-surface-variant">{{ city.humidity }}%</text>
+                  </view>
+                  <view class="flex items-center ml-3">
+                    <Icon name="wind" size="12px" class="text-on-surface-variant mr-1" />
+                    <text class="text-body-sm text-on-surface-variant">{{ city.windSpeed }}km/h</text>
+                  </view>
+                  <Icon name="chevron-right" size="14px" class="text-on-surface-variant ml-3" />
+                </view>
+              </view>
+              <view class="flex items-center justify-between">
+                <view v-if="getScenics(city.cityId).length > 0" class="flex flex-wrap flex-1">
+                  <text
+                    v-for="spot in getScenics(city.cityId)"
+                    :key="spot"
+                    class="text-label-sm text-primary mr-2 mb-1 px-2 py-0-5 rounded-full bg-primary-container"
+                  >{{ spot }}</text>
+                </view>
+                <text v-if="city.updatedAt" class="text-body-sm text-on-surface-variant flex-shrink-0">{{ formatTime(city.updatedAt) }}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -128,6 +153,7 @@ import type { SnowRegion } from '@/models/types'
 import { fetchSnowRegions, filterSnowingCities } from '@/services/snow-service'
 import { forceRefresh } from '@/utils/cache'
 import { getNavBarInfo } from '@/utils/navbar'
+import { getScenics } from '@/models/scenics'
 import Icon from '@/components/Icon.vue'
 import SnowCard from '@/components/SnowCard.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
@@ -139,9 +165,29 @@ const loading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取降雪数据失败，请检查网络连接')
 const selectedDate = ref('')
+const cityImages = ref<Record<string, string>>({})
 
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
+
+/** 图片缓存键前缀 */
+const IMG_CACHE_PREFIX = 'city_img_'
+
+/** 每个城市的标志性景点 prompt */
+const CITY_PROMPTS: Record<string, string> = {
+  '101010100': '北京故宫太和殿雪景，冬日白雪覆盖金色琉璃瓦，摄影作品风格',
+  '101190101': '南京中山陵雪景，白雪覆盖台阶和松柏，冬日宁静氛围',
+  '101210101': '杭州西湖断桥残雪，远山含黛湖面如镜，中国水墨画风格',
+  '101180101': '河南少林寺雪景，古刹红墙白雪，禅意冬日',
+  '101200101': '武汉黄鹤楼雪景，飞檐翘角覆盖白雪，长江远景',
+  '101280101': '广州白云山冬日风光，云雾缭绕山峦叠翠',
+  '101040100': '重庆洪崖洞夜景雪景，吊脚楼灯火辉煌覆盖薄雪',
+  '101270101': '成都宽窄巷子雪景，青砖灰瓦白雪，川西民居风格',
+  '101230101': '福州三坊七巷冬日，白墙灰瓦马头墙，古巷幽深',
+  '101120101': '济南趵突泉冬日雪景，泉水蒸腾白雪皑皑',
+  '101070101': '沈阳故宫雪景，红墙金瓦白雪覆盖，满清皇家建筑',
+  '101050101': '哈尔滨冰雪大世界，冰雕城堡五彩灯光，梦幻冬夜',
+}
 
 /** 热门旅游城市 ID 列表 */
 const HOT_CITY_IDS = [
@@ -206,24 +252,14 @@ const hotCities = computed(() => {
 
 const snowingCities = computed(() => filterSnowingCities(allRegions.value))
 
-/** 热门景区映射 */
-const CITY_SCENICS: Record<string, string[]> = {
-  '101010100': ['故宫', '长城', '颐和园'],
-  '101190101': ['中山陵', '夫子庙', '玄武湖'],
-  '101210101': ['西湖', '灵隐寺', '千岛湖'],
-  '101180101': ['少林寺', '龙门石窟'],
-  '101200101': ['黄鹤楼', '东湖', '武大樱园'],
-  '101280101': ['白云山', '长隆', '沙面'],
-  '101040100': ['洪崖洞', '磁器口', '武隆天坑'],
-  '101270101': ['宽窄巷子', '都江堰', '青城山'],
-  '101230101': ['三坊七巷', '鼓山', '西湖公园'],
-  '101120101': ['趵突泉', '大明湖', '千佛山'],
-  '101070101': ['故宫', '张氏帅府', '棋盘山'],
-  '101050101': ['冰雪大世界', '中央大街', '太阳岛'],
-}
-
-function getScenics(cityId: string): string[] {
-  return CITY_SCENICS[cityId] || []
+function formatTime(isoString: string): string {
+  try {
+    const date = new Date(isoString)
+    if (isNaN(date.getTime())) return ''
+    const h = String(date.getHours()).padStart(2, '0')
+    const m = String(date.getMinutes()).padStart(2, '0')
+    return `${h}:${m}`
+  } catch { return '' }
 }
 
 const centerLat = computed((): number => {
@@ -265,6 +301,52 @@ function getSnowBadgeBg(level: string): string {
     case '中雪': return 'bg-snow-moderate'
     case '小雪': return 'bg-primary'
     default: return 'bg-snow-none'
+  }
+}
+
+/**
+ * 获取城市景区图片（优先读缓存，没有则调用 AI 生成）
+ */
+async function loadCityImage(cityId: string) {
+  // 已有图片，跳过
+  if (cityImages.value[cityId]) return
+
+  // 读本地缓存
+  const cacheKey = IMG_CACHE_PREFIX + cityId
+  try {
+    const cached = uni.getStorageSync(cacheKey)
+    if (cached) {
+      cityImages.value[cityId] = cached
+      return
+    }
+  } catch {}
+
+  // 没有缓存，调用云函数生成
+  const prompt = CITY_PROMPTS[cityId]
+  if (!prompt) return
+
+  try {
+    // #ifdef MP-WEIXIN
+    const res = await wx.cloud.callFunction({
+      name: 'generateImage-mvdJNQ',
+      data: { prompt, cityId },
+    })
+    const result = res.result as { success?: boolean; imageUrl?: string }
+    if (result.success && result.imageUrl) {
+      cityImages.value[cityId] = result.imageUrl
+      // 写入本地缓存
+      try { uni.setStorageSync(cacheKey, result.imageUrl) } catch {}
+    }
+    // #endif
+  } catch (err) {
+    console.error(`生成城市图片失败: ${cityId}`, err)
+  }
+}
+
+/** 批量加载所有热门城市图片（逐个请求，避免并发过高） */
+async function loadAllCityImages() {
+  for (const id of HOT_CITY_IDS) {
+    await loadCityImage(id)
   }
 }
 
@@ -324,6 +406,7 @@ function onFabClick() {
 onLoad(() => {
   selectedDate.value = dateOptions.value[0]?.value ?? ''
   loadData()
+  loadAllCityImages()
 })
 </script>
 
