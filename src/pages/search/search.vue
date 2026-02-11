@@ -10,7 +10,7 @@
           v-model="keyword"
           class="flex-1 text-body-lg text-on-surface"
           type="text"
-          placeholder="搜索城市名称..."
+          placeholder="搜索城市、省份、景区..."
           placeholder-class="text-on-surface-variant"
           confirm-type="search"
           :focus="autoFocus"
@@ -39,7 +39,7 @@
 
     <ErrorRetry v-else-if="hasError" :message="errorMessage" @retry="doSearch" />
 
-    <EmptyState v-else-if="hasSearched && searchResults.length === 0" message="未找到该城市，请检查输入" icon="magnifying-glass" />
+    <EmptyState v-else-if="hasSearched && searchResults.length === 0" message="未找到相关城市或景区，请换个关键词试试" icon="magnifying-glass" />
 
     <!-- 搜索结果 -->
     <view v-else-if="searchResults.length > 0" class="px-4 pb-6">
@@ -49,20 +49,29 @@
       <view
         v-for="city in searchResults"
         :key="city.cityId"
-        class="rounded-3xl bg-surface-container shadow-elevation-1 mb-3 px-4 py-4 flex items-center justify-between transition-all duration-200"
+        class="rounded-3xl bg-surface-container shadow-elevation-1 mb-3 px-4 py-4 transition-all duration-200"
         hover-class="hover-elevation-2"
         @click="onCityClick(city)"
       >
-        <view class="flex items-center">
-          <view class="mr-3 rounded-full bg-primary-container flex items-center justify-center" style="width: 40px; height: 40px;">
-            <Icon name="location-dot" size="18px" class="text-primary-on-container" />
+        <view class="flex items-center justify-between">
+          <view class="flex items-center flex-1 min-w-0">
+            <view class="mr-3 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0" style="width: 40px; height: 40px;">
+              <Icon :name="city.matchType === 'scenic' ? 'mountain-sun' : 'location-dot'" size="18px" class="text-primary-on-container" />
+            </view>
+            <view class="flex-1 min-w-0">
+              <text class="text-title-md text-on-surface block">{{ city.cityName }}</text>
+              <text class="text-body-sm text-on-surface-variant block mt-1">{{ city.province }}</text>
+            </view>
           </view>
-          <view>
-            <text class="text-title-md text-on-surface block">{{ city.cityName }}</text>
-            <text class="text-body-sm text-on-surface-variant block mt-1">{{ city.province }}</text>
-          </view>
+          <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
         </view>
-        <Icon name="chevron-right" size="14px" class="text-on-surface-variant" />
+        <view v-if="city.scenics && city.scenics.length > 0" class="flex flex-wrap mt-2 ml-13">
+          <text
+            v-for="spot in city.scenics"
+            :key="spot"
+            class="text-label-sm text-primary mr-2 mb-1 px-2 py-0-5 rounded-full bg-primary-container"
+          >{{ spot }}</text>
+        </view>
       </view>
     </view>
 
@@ -71,7 +80,7 @@
       <view class="mb-6 rounded-full bg-primary-container flex items-center justify-center" style="width: 80px; height: 80px;">
         <Icon name="magnifying-glass" size="36px" class="text-primary-on-container" />
       </view>
-      <text class="text-body-lg text-on-surface-variant text-center">输入城市名称开始搜索</text>
+      <text class="text-body-lg text-on-surface-variant text-center">输入城市、省份或景区名称搜索</text>
     </view>
   </view>
 </template>
@@ -79,15 +88,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import type { City } from '@/models/types'
 import { getNavBarInfo } from '@/utils/navbar'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
+interface SearchCity {
+  cityId: string
+  cityName: string
+  province: string
+  scenics?: string[]
+  matchType?: string
+}
+
 const keyword = ref('')
-const searchResults = ref<City[]>([])
+const searchResults = ref<SearchCity[]>([])
 const loading = ref(false)
 const hasSearched = ref(false)
 const hasError = ref(false)
@@ -130,10 +146,10 @@ async function doSearch() {
   loading.value = true
   hasError.value = false
   try {
-    let cities: City[] = []
+    let cities: SearchCity[] = []
     // #ifdef MP-WEIXIN
     const res = await wx.cloud.callFunction({ name: 'searchCity', data: { keyword: trimmed } })
-    const result = res.result as { code?: number; data?: { cities?: City[] } }
+    const result = res.result as { code?: number; data?: { cities?: SearchCity[] } }
     if (result.code === 0 && result.data?.cities) cities = result.data.cities
     // #endif
     searchResults.value = cities
@@ -146,7 +162,7 @@ async function doSearch() {
   }
 }
 
-function onCityClick(city: City) {
+function onCityClick(city: SearchCity) {
   uni.navigateTo({ url: `/pages/detail/detail?cityId=${city.cityId}` })
 }
 

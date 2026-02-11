@@ -1,10 +1,11 @@
 {
   "name": "searchCity",
   "version": "1.0.0",
-  "description": "搜索城市云函数",
+  "description": "搜索城市云函数（AI 意图识别 + DB 搜索 + GeoAPI 兜底）",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3",
+    "@cloudbase/node-sdk": "latest",
     "axios": "^1.6.0"
   }
 }

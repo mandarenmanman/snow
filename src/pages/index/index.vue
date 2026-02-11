@@ -371,7 +371,7 @@ function onMarkerTap(e: { markerId?: number; detail?: { markerId?: number } }) {
 }
 
 function onFabClick() {
-  uni.navigateTo({ url: '/pages/search/search' })
+  uni.switchTab({ url: '/pages/search/search' })
 }
 
 onLoad(async () => {

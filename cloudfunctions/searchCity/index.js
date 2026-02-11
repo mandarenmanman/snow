@@ -1,35 +1,137 @@
 // 云函数: searchCity
-// 搜索城市（调用和风天气 GeoAPI 城市搜索）
+// AI 意图识别 → DB 搜索 → GeoAPI 兜底
 const cloud = require('wx-server-sdk')
+const tcb = require('@cloudbase/node-sdk')
 const axios = require('axios')
 
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV,
-})
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-/** 和风天气 API 密钥 */
+const db = cloud.database()
+const _ = db.command
+
 const API_KEY = 'f27d9b38adcf4a36a09f6b6ab6133fd7'
-
-/** API 请求超时时间（毫秒） */
 const REQUEST_TIMEOUT = 10000
-
-/** 和风天气 GeoAPI 基础 URL */
 const GEO_API_BASE = 'https://nf5g7caymw.re.qweatherapi.com/geo/v2'
 
 /**
- * 调用和风天气城市搜索 API
+ * 调用 AI 解析用户搜索意图
  *
- * @param {string} keyword - 搜索关键词
- * @returns {Promise<Array>} 匹配的城市列表
+ * 返回 JSON: { type: "city"|"scenic"|"province"|"unknown", keywords: string[] }
+ * - type=city: keywords 是城市名
+ * - type=scenic: keywords 是景点名，可能附带城市名
+ * - type=province: keywords 是省份名
  */
-async function searchCityByKeyword(keyword) {
+async function parseIntent(app, keyword) {
+  try {
+    const ai = app.ai()
+    const model = ai.createModel('deepseek')
+
+    const res = await model.generateText({
+      model: 'deepseek-v3.2',
+      messages: [
+        {
+          role: 'system',
+          content: `你是一个地理搜索意图识别助手。用户会输入一个搜索词，你需要判断它是城市名、景点/景区名、还是省份名，并提取出可用于数据库搜索的关键词。
+
+规则：
+1. 如果是明确的城市名（如"北京""杭州""哈尔滨"），type=city，keywords 放城市名
+2. 如果是景点/景区（如"故宫""西湖""长城""冰雪大世界"），type=scenic，keywords 放景点名；如果能推断出所在城市也加上
+3. 如果是省份（如"浙江""黑龙江"），type=province，keywords 放省份名
+4. 如果无法判断，type=unknown，keywords 放原始输入
+
+只返回 JSON，不要任何解释。格式：{"type":"city","keywords":["北京"]}`
+        },
+        { role: 'user', content: keyword }
+      ],
+      temperature: 0,
+    })
+
+
+    //输出相应结果
+    console.log
+      ('AI result:', res.text)
+    if (!res.text) throw new Error('AI 没有返回内容')
+
+
+    const text = (res.text || '').trim()
+    // 提取 JSON
+    const match = text.match(/\{[\s\S]*\}/)
+    if (match) {
+      return JSON.parse(match[0])
+    }
+  } catch (err) {
+    console.warn('AI 意图识别失败:', err.message)
+  }
+
+  // AI 失败，返回 unknown
+  return { type: 'unknown', keywords: [keyword] }
+}
+
+/**
+ * 根据 AI 解析结果搜索 cities 集合
+ */
+async function searchFromDB(intent) {
+  const { type, keywords } = intent
+  const results = new Map()
+
+  for (const kw of keywords) {
+    const reg = db.RegExp({ regexp: kw, options: 'i' })
+    let queries = []
+
+    if (type === 'scenic') {
+      // 景点优先搜 scenics 字段，再搜城市名
+      queries = [
+        db.collection('cities').where({ scenics: reg }).limit(20).get(),
+        db.collection('cities').where({ cityName: reg }).limit(10).get(),
+      ]
+    } else if (type === 'province') {
+      queries = [
+        db.collection('cities').where({ province: reg }).limit(30).get(),
+      ]
+    } else if (type === 'city') {
+      queries = [
+        db.collection('cities').where({ cityName: reg }).limit(20).get(),
+        db.collection('cities').where({ adm2Zh: reg }).limit(10).get(),
+      ]
+    } else {
+      // unknown: 全维度搜
+      queries = [
+        db.collection('cities').where({ cityName: reg }).limit(20).get(),
+        db.collection('cities').where({ province: reg }).limit(10).get(),
+        db.collection('cities').where({ scenics: reg }).limit(10).get(),
+      ]
+    }
+
+    const settled = await Promise.allSettled(queries)
+    for (const r of settled) {
+      if (r.status === 'fulfilled') {
+        for (const c of r.value.data) {
+          if (!results.has(c.cityId)) {
+            results.set(c.cityId, {
+              cityId: c.cityId,
+              cityName: c.cityName,
+              province: c.province || '',
+              scenics: c.scenics || [],
+              latitude: c.latitude || 0,
+              longitude: c.longitude || 0,
+              matchType: type === 'scenic' ? 'scenic' : type === 'province' ? 'province' : 'city',
+            })
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(results.values())
+}
+
+/**
+ * 兜底：和风天气 GeoAPI
+ */
+async function searchFromGeoAPI(keyword) {
   const url = `${GEO_API_BASE}/city/lookup`
   const response = await axios.get(url, {
-    params: {
-      location: keyword,
-      key: API_KEY,
-      range: 'cn',
-    },
+    params: { location: keyword, key: API_KEY, range: 'cn' },
     timeout: REQUEST_TIMEOUT,
   })
 
@@ -37,14 +139,17 @@ async function searchCityByKeyword(keyword) {
     throw new Error(`QWeather GeoAPI error: code=${response.data.code}`)
   }
 
-  return response.data.location || []
+  return (response.data.location || []).map((loc) => ({
+    cityId: loc.id,
+    cityName: loc.name,
+    province: loc.adm1 || '',
+    scenics: [],
+    latitude: parseFloat(loc.lat) || 0,
+    longitude: parseFloat(loc.lon) || 0,
+    matchType: 'geo',
+  }))
 }
 
-/**
- * 云函数入口
- * @param {Object} event - 请求参数
- * @param {string} event.keyword - 搜索关键词
- */
 exports.main = async (event, context) => {
   const { keyword } = event
 
@@ -53,19 +158,27 @@ exports.main = async (event, context) => {
       return { code: 400, message: '搜索关键词不能为空' }
     }
 
-    const locations = await searchCityByKeyword(keyword.trim())
+    const kw = keyword.trim()
+    const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
 
-    // 将和风天气 GeoAPI 返回的城市数据映射为统一格式
-    const cities = locations.map((loc) => ({
-      cityId: loc.id,
-      cityName: loc.name,
-      province: loc.adm1 || '',
-    }))
+    // 1. AI 解析意图
+    console.log('搜索关键词:', kw)
+    const intent = await parseIntent(app, kw)
+    console.log('AI 意图:', JSON.stringify(intent))
+
+    // 2. 根据意图搜 DB
+    let cities = await searchFromDB(intent)
+
+    // 3. DB 没结果，用原始关键词兜底 GeoAPI
+    if (cities.length === 0) {
+      cities = await searchFromGeoAPI(kw)
+    }
 
     return {
       code: 0,
       data: {
         cities,
+        intent, // 返回意图信息，方便前端展示
       },
     }
   } catch (err) {
