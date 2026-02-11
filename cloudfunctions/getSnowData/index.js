@@ -75,15 +75,32 @@ function mapWeatherCodeToSnowLevel(code) {
 }
 
 /**
+ * 构建和风天气 location 参数
+ * 优先使用经纬度（格式: "经度,纬度"），回退到 cityId
+ *
+ * @param {Object} params
+ * @param {string} [params.cityId]
+ * @param {number} [params.longitude]
+ * @param {number} [params.latitude]
+ * @returns {string}
+ */
+function buildLocation({ cityId, longitude, latitude }) {
+  if (longitude && latitude) {
+    return `${longitude},${latitude}`
+  }
+  return cityId
+}
+
+/**
  * 调用和风天气实时天气 API
  *
- * @param {string} cityId - 城市 ID
+ * @param {string} location - 经纬度或城市 ID
  * @returns {Promise<Object>} 实时天气数据
  */
-async function fetchCurrentWeather(cityId) {
+async function fetchCurrentWeather(location) {
   const url = `${WEATHER_API_BASE}/weather/now`
   const response = await axios.get(url, {
-    params: { location: cityId, key: API_KEY },
+    params: { location, key: API_KEY },
     timeout: REQUEST_TIMEOUT,
   })
 
@@ -97,13 +114,13 @@ async function fetchCurrentWeather(cityId) {
 /**
  * 调用和风天气 3 天预报 API
  *
- * @param {string} cityId - 城市 ID
+ * @param {string} location - 经纬度或城市 ID
  * @returns {Promise<Array>} 3 天预报数据
  */
-async function fetchForecast3d(cityId) {
+async function fetchForecast3d(location) {
   const url = `${WEATHER_API_BASE}/weather/3d`
   const response = await axios.get(url, {
-    params: { location: cityId, key: API_KEY },
+    params: { location, key: API_KEY },
     timeout: REQUEST_TIMEOUT,
   })
 
@@ -130,7 +147,8 @@ async function handleListAction() {
 
   const weatherPromises = cities.map(async (city) => {
     try {
-      const weatherNow = await fetchCurrentWeather(city.cityId)
+      const location = buildLocation(city)
+      const weatherNow = await fetchCurrentWeather(location)
       const snowLevel = mapWeatherCodeToSnowLevel(weatherNow.icon)
 
       return {
@@ -168,16 +186,20 @@ async function handleListAction() {
 /**
  * 处理 detail action：获取城市降雪详情
  *
- * 并发请求实时天气和 3 天预报数据，组装为城市详情响应。
+ * 统一使用经纬度查询天气，兼容城市和景区。
  *
- * @param {string} cityId - 城市 ID
+ * @param {string} cityId - 城市 ID 或 POI 景区 ID
+ * @param {number} [longitude] - 经度
+ * @param {number} [latitude] - 纬度
  * @returns {Promise<Object>} 城市详情响应
  */
-async function handleDetailAction(cityId) {
+async function handleDetailAction(cityId, longitude, latitude) {
+  const location = buildLocation({ cityId, longitude, latitude })
+
   // 并发请求实时天气和 3 天预报
   const [weatherNow, forecast3d] = await Promise.all([
-    fetchCurrentWeather(cityId),
-    fetchForecast3d(cityId),
+    fetchCurrentWeather(location),
+    fetchForecast3d(location),
   ])
 
   const snowLevel = mapWeatherCodeToSnowLevel(weatherNow.icon)
@@ -256,7 +278,7 @@ function buildSnowPeriod(daySnow, nightSnow) {
  * @param {string} [event.cityId] - 城市 ID（detail 模式必填）
  */
 exports.main = async (event, context) => {
-  const { action, cityId } = event
+  const { action, cityId, longitude, latitude } = event
 
   try {
     if (action === 'cities') {
@@ -272,7 +294,7 @@ exports.main = async (event, context) => {
       if (!cityId) {
         return { code: 400, message: '缺少 cityId 参数' }
       }
-      const data = await handleDetailAction(cityId)
+      const data = await handleDetailAction(cityId, longitude, latitude)
       return {
         code: 0,
         data,

@@ -13,7 +13,7 @@
         </view>
         <view>
           <text class="text-headline-md font-bold text-on-surface block">
-            {{ cityDetail ? cityDetail.cityName : '城市详情' }}
+            {{ cityDetail ? cityDetail.cityName : (cityName || '城市详情') }}
           </text>
           <text v-if="cityDetail" class="text-body-sm text-on-surface-variant block mt-1">
             {{ province ? province + ' · ' : '' }}更新于 {{ formattedUpdatedAt }}
@@ -144,6 +144,9 @@ import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
 const cityId = ref('')
+const cityName = ref('')
+const longitude = ref(0)
+const latitude = ref(0)
 const cityDetail = ref<CityDetail | null>(null)
 const loading = ref(false)
 const hasError = ref(false)
@@ -212,7 +215,7 @@ async function loadDetail() {
   hasError.value = false
   try {
     // #ifdef MP-WEIXIN
-    const res = await wx.cloud.callFunction({ name: 'getSnowData', data: { action: 'detail', cityId: cityId.value } })
+    const res = await wx.cloud.callFunction({ name: 'getSnowData', data: { action: 'detail', cityId: cityId.value, longitude: longitude.value || undefined, latitude: latitude.value || undefined } })
     const result = res.result as { code?: number; data?: CityDetail }
     if (result.code === 0 && result.data) cityDetail.value = result.data
     // #endif
@@ -261,6 +264,9 @@ async function toggleFavorite() {
 onLoad((options) => {
   if (options?.cityId) {
     cityId.value = options.cityId
+    longitude.value = Number(options.longitude) || 0
+    latitude.value = Number(options.latitude) || 0
+    if (options.cityName) cityName.value = decodeURIComponent(options.cityName)
     loadDetail()
     checkFavoriteStatus()
   }

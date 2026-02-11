@@ -61,6 +61,9 @@
             <view class="flex-1 min-w-0">
               <text class="text-title-md text-on-surface block">{{ city.cityName }}</text>
               <text class="text-body-sm text-on-surface-variant block mt-1">{{ city.province }}</text>
+              <text v-if="city.matchScenic" class="text-body-sm text-primary block mt-1">
+                匹配景区：{{ city.matchScenic }}
+              </text>
             </view>
           </view>
           <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
@@ -98,8 +101,11 @@ interface SearchCity {
   cityId: string
   cityName: string
   province: string
+  latitude?: number
+  longitude?: number
   scenics?: string[]
   matchType?: string
+  matchScenic?: string
 }
 
 const keyword = ref('')
@@ -163,7 +169,14 @@ async function doSearch() {
 }
 
 function onCityClick(city: SearchCity) {
-  uni.navigateTo({ url: `/pages/detail/detail?cityId=${city.cityId}` })
+  let url = `/pages/detail/detail?cityId=${city.cityId}`
+  if (city.latitude && city.longitude) {
+    url += `&latitude=${city.latitude}&longitude=${city.longitude}`
+  }
+  if (city.cityName) {
+    url += `&cityName=${encodeURIComponent(city.cityName)}`
+  }
+  uni.navigateTo({ url })
 }
 
 onLoad(() => { autoFocus.value = true })

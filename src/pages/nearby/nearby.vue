@@ -159,11 +159,21 @@ function getSnowLevelBadgeClass(snowLevel: string): string {
 }
 
 function onItemClick(item: NearbySnowResult) {
-  uni.navigateTo({ url: `/pages/detail/detail?cityId=${item.cityId}` })
+  let url = `/pages/detail/detail?cityId=${item.cityId}`
+  if (item.latitude && item.longitude) {
+    url += `&latitude=${item.latitude}&longitude=${item.longitude}`
+  }
+  uni.navigateTo({ url })
 }
 
 function onNearestClick() {
-  if (nearestCity.value) uni.navigateTo({ url: `/pages/detail/detail?cityId=${nearestCity.value.cityId}` })
+  if (nearestCity.value) {
+    let url = `/pages/detail/detail?cityId=${nearestCity.value.cityId}`
+    if (nearestCity.value.latitude && nearestCity.value.longitude) {
+      url += `&latitude=${nearestCity.value.latitude}&longitude=${nearestCity.value.longitude}`
+    }
+    uni.navigateTo({ url })
+  }
 }
 
 onLoad(() => { requestLocation() })

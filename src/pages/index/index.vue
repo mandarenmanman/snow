@@ -355,18 +355,30 @@ onPullDownRefresh(async () => {
 })
 
 function onCardClick(region: SnowRegion) {
-  uni.navigateTo({ url: `/pages/detail/detail?cityId=${region.cityId}` })
+  let url = `/pages/detail/detail?cityId=${region.cityId}`
+  if (region.latitude && region.longitude) {
+    url += `&latitude=${region.latitude}&longitude=${region.longitude}`
+  }
+  uni.navigateTo({ url })
 }
 
 function onHotCityClick(city: SnowRegion) {
-  uni.navigateTo({ url: `/pages/detail/detail?cityId=${city.cityId}` })
+  let url = `/pages/detail/detail?cityId=${city.cityId}`
+  if (city.latitude && city.longitude) {
+    url += `&latitude=${city.latitude}&longitude=${city.longitude}`
+  }
+  uni.navigateTo({ url })
 }
 
 function onMarkerTap(e: { markerId?: number; detail?: { markerId?: number } }) {
   const markerId = e.markerId ?? e.detail?.markerId
   if (markerId !== undefined && markerId >= 0 && markerId < snowingCities.value.length) {
     const region = snowingCities.value[markerId]
-    uni.navigateTo({ url: `/pages/detail/detail?cityId=${region.cityId}` })
+    let url = `/pages/detail/detail?cityId=${region.cityId}`
+    if (region.latitude && region.longitude) {
+      url += `&latitude=${region.latitude}&longitude=${region.longitude}`
+    }
+    uni.navigateTo({ url })
   }
 }
 
