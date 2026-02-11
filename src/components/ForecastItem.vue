@@ -13,9 +13,8 @@
 
     <!-- 中部：降雪强度 + 雪花图标 -->
     <view class="flex items-center mx-3">
-      <Icon name="snowflake" :size="snowflakeSize" :class="snowflakeColorClass" />
-      <text class="text-label-md ml-1" :class="snowLevelTextClass">
-        {{ forecast.snowLevel }}
+      <text class="text-label-md" :class="snowLevelTextClass">
+        {{ snowLevelToFlakes(forecast.snowLevel) }}
       </text>
     </view>
 
@@ -33,6 +32,7 @@
 import { computed } from 'vue'
 import type { SnowForecast } from '@/models/types'
 import Icon from '@/components/Icon.vue'
+import { snowLevelToFlakes } from '@/utils/snow'
 
 const props = defineProps<{
   forecast: SnowForecast

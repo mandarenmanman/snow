@@ -34,8 +34,8 @@
           <view class="flex-1">
             <view class="flex items-center">
               <text class="text-title-md text-on-surface">{{ item.cityName }}</text>
-              <view class="ml-2 px-2 py-0-5 rounded-full" :class="getSnowLevelBadgeClass(item.snowLevel)">
-                <text class="text-label-sm text-white">{{ item.snowLevel }}</text>
+              <view class="ml-2 px-2 py-0-5 rounded-full flex items-center justify-center" :class="getSnowLevelBadgeClass(item.snowLevel)">
+                <text class="text-label-md text-white">{{ snowLevelToFlakes(item.snowLevel) }}</text>
               </view>
             </view>
             <view class="flex items-center mt-1">
@@ -65,8 +65,8 @@
             <view class="flex-1">
               <view class="flex items-center">
                 <text class="text-title-md text-on-surface">{{ nearestCity.cityName }}</text>
-                <view class="ml-2 px-2 py-0-5 rounded-full" :class="getSnowLevelBadgeClass(nearestCity.snowLevel)">
-                  <text class="text-label-sm text-white">{{ nearestCity.snowLevel }}</text>
+                <view class="ml-2 px-2 py-0-5 rounded-full flex items-center justify-center" :class="getSnowLevelBadgeClass(nearestCity.snowLevel)">
+                  <text class="text-label-md text-white">{{ snowLevelToFlakes(nearestCity.snowLevel) }}</text>
                 </view>
               </view>
               <text class="text-body-sm text-on-surface-variant block mt-1">
@@ -86,6 +86,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import type { NearbySnowResult } from '@/models/types'
 import { getNavBarInfo } from '@/utils/navbar'
+import { snowLevelToFlakes } from '@/utils/snow'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'

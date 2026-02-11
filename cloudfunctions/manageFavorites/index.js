@@ -12,15 +12,14 @@ const favoritesCollection = db.collection('favorites')
 /**
  * 处理 add action：添加城市到收藏
  *
- * 先检查是否已存在相同 openId + cityId 的记录（防止重复收藏），
- * 若不存在则插入新记录。
- *
  * @param {string} openId - 用户 OpenID
  * @param {string} cityId - 城市 ID
  * @param {string} cityName - 城市名称
+ * @param {number} [latitude] - 纬度
+ * @param {number} [longitude] - 经度
  * @returns {Promise<Object>} 操作结果
  */
-async function handleAddAction(openId, cityId, cityName) {
+async function handleAddAction(openId, cityId, cityName, latitude, longitude) {
   // 检查是否已收藏（防止重复）
   const { data: existing } = await favoritesCollection
     .where({ openId, cityId })
@@ -36,6 +35,8 @@ async function handleAddAction(openId, cityId, cityName) {
       openId,
       cityId,
       cityName,
+      latitude: latitude || 0,
+      longitude: longitude || 0,
       createdAt: new Date().toISOString(),
     },
   })
@@ -82,6 +83,8 @@ async function handleListAction(openId) {
   const favorites = data.map((item) => ({
     cityId: item.cityId,
     cityName: item.cityName,
+    latitude: item.latitude || 0,
+    longitude: item.longitude || 0,
     snowStatus: '',
   }))
 
@@ -101,7 +104,7 @@ async function handleListAction(openId) {
  * @param {string} [event.cityName] - 城市名称（add 必填）
  */
 exports.main = async (event, context) => {
-  const { action, cityId, cityName } = event
+  const { action, cityId, cityName, latitude, longitude } = event
   const wxContext = cloud.getWXContext()
   const openId = wxContext.OPENID
 
@@ -117,7 +120,7 @@ exports.main = async (event, context) => {
       if (!cityName) {
         return { code: 400, message: '缺少 cityName 参数' }
       }
-      return await handleAddAction(openId, cityId, cityName)
+      return await handleAddAction(openId, cityId, cityName, latitude, longitude)
     } else if (action === 'remove') {
       if (!cityId) {
         return { code: 400, message: '缺少 cityId 参数' }

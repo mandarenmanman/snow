@@ -40,11 +40,11 @@
           <!-- 降雪角标 -->
           <view
             v-if="item.snowStatus && item.snowStatus !== '无' && item.snowStatus !== '未知'"
-            class="px-3 py-1 rounded-full"
+            class="px-3 py-1 rounded-full flex items-center justify-center"
             :class="getSnowBadgeBg(item.snowStatus)"
             style="position: absolute; top: 10px; right: 10px;"
           >
-            <text class="text-label-sm text-white">{{ item.snowStatus }}</text>
+            <text class="text-label-md text-white">{{ snowLevelToFlakes(item.snowStatus) }}</text>
           </view>
           <!-- 取消收藏 -->
           <view
@@ -83,12 +83,13 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, getProvince } from '@/models/scenics'
+import { snowLevelToFlakes } from '@/utils/snow'
 import Icon from '@/components/Icon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
-interface FavoriteItem { cityId: string; cityName: string; snowStatus: string }
+interface FavoriteItem { cityId: string; cityName: string; latitude: number; longitude: number; snowStatus: string }
 
 const favorites = ref<FavoriteItem[]>([])
 const cityImages = ref<Record<string, string>>({})
@@ -113,12 +114,19 @@ async function loadFavorites() {
     // #ifndef MP-WEIXIN
     favorites.value = []
     // #endif
-    // 加载已缓存的图片
+    // 加载图片：优先本地缓存，未命中则调用云函数
     for (const item of favorites.value) {
       try {
         const cached = uni.getStorageSync(IMG_CACHE_PREFIX + item.cityId)
-        if (cached) cityImages.value[item.cityId] = cached
+        if (cached) {
+          cityImages.value[item.cityId] = cached
+        }
       } catch {}
+    }
+    // 对没有缓存图片的收藏项，异步请求生成图片
+    const uncached = favorites.value.filter((item) => !cityImages.value[item.cityId])
+    if (uncached.length > 0) {
+      loadCityImages(uncached)
     }
   } catch (err) {
     hasError.value = true
@@ -128,8 +136,43 @@ async function loadFavorites() {
   }
 }
 
+/**
+ * 异步加载城市图片，逐个请求避免并发过多
+ */
+async function loadCityImages(items: FavoriteItem[]) {
+  for (const item of items) {
+    try {
+      // #ifdef MP-WEIXIN
+      const res = await wx.cloud.callFunction({
+        name: 'generateImage-mvdJNQ',
+        data: {
+          cityId: item.cityId,
+          prompt: `${item.cityName}风景，雪景，高清摄影`,
+        },
+      })
+      const result = res.result as { success?: boolean; imageUrl?: string }
+      if (result.success && result.imageUrl) {
+        cityImages.value[item.cityId] = result.imageUrl
+        try {
+          uni.setStorageSync(IMG_CACHE_PREFIX + item.cityId, result.imageUrl)
+        } catch {}
+      }
+      // #endif
+    } catch (e) {
+      console.warn(`加载 ${item.cityName} 图片失败:`, e)
+    }
+  }
+}
+
 function onFavoriteClick(item: FavoriteItem) {
-  uni.navigateTo({ url: `/pages/detail/detail?cityId=${item.cityId}` })
+  let url = `/pages/detail/detail?cityId=${item.cityId}`
+  if (item.latitude && item.longitude) {
+    url += `&latitude=${item.latitude}&longitude=${item.longitude}`
+  }
+  if (item.cityName) {
+    url += `&cityName=${encodeURIComponent(item.cityName)}`
+  }
+  uni.navigateTo({ url })
 }
 
 async function onRemove(item: FavoriteItem) {

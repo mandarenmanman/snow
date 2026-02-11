@@ -58,9 +58,8 @@
             <text class="text-headline-sm text-on-surface-variant ml-1 mb-1">°C</text>
           </view>
           <view class="flex items-center rounded-full px-4 py-2" :class="snowLevelBgClass">
-            <Icon name="snowflake" size="16px" class="mr-2" :class="snowLevelIconClass" />
             <text class="text-label-lg" :class="snowLevelTextClass">
-              {{ cityDetail.current.snowLevel }}
+              {{ snowLevelToFlakes(cityDetail.current.snowLevel) }}
             </text>
           </view>
         </view>
@@ -138,6 +137,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import type { CityDetail } from '@/models/types'
 import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, getProvince } from '@/models/scenics'
+import { snowLevelToFlakes } from '@/utils/snow'
 import Icon from '@/components/Icon.vue'
 import ForecastItem from '@/components/ForecastItem.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
@@ -251,7 +251,13 @@ async function toggleFavorite() {
     // #ifdef MP-WEIXIN
     await wx.cloud.callFunction({
       name: 'manageFavorites',
-      data: { action, cityId: cityId.value, cityName: cityDetail.value?.cityName ?? '' },
+      data: {
+        action,
+        cityId: cityId.value,
+        cityName: cityName.value || cityDetail.value?.cityName || '',
+        latitude: latitude.value || undefined,
+        longitude: longitude.value || undefined,
+      },
     })
     // #endif
     isFavorited.value = !isFavorited.value

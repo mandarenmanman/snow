@@ -24,7 +24,7 @@
         </text>
       </view>
       <view class="px-3 py-1 rounded-full" :class="snowLevelBadgeClass">
-        <text class="text-label-md text-white">{{ snowRegion.snowLevel }}</text>
+        <text class="text-label-md text-white">{{ snowLevelToFlakes(snowRegion.snowLevel) }}</text>
       </view>
     </view>
 
@@ -39,6 +39,7 @@
 import { computed } from 'vue'
 import type { SnowRegion } from '@/models/types'
 import Icon from '@/components/Icon.vue'
+import { snowLevelToFlakes } from '@/utils/snow'
 
 const props = defineProps<{
   snowRegion: SnowRegion

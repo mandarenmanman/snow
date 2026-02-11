@@ -36,7 +36,7 @@
           :latitude="centerLat"
           :longitude="centerLon"
           :markers="mapMarkers"
-          :scale="5"
+          :scale="mapScale"
           style="width: 100%; height: 260px;"
           @markertap="onMarkerTap"
         />
@@ -79,11 +79,11 @@
               <!-- 降雪状态角标 -->
               <view
                 v-if="city.snowLevel !== '无'"
-                class="px-3 py-1 rounded-full"
+                class="px-3 py-1 rounded-full flex items-center justify-center"
                 :class="getSnowBadgeBg(city.snowLevel)"
                 style="position: absolute; top: 12px; right: 12px;"
               >
-                <text class="text-label-sm text-white">{{ city.snowLevel }}</text>
+                <text class="text-label-md text-white">{{ snowLevelToFlakes(city.snowLevel) }}</text>
               </view>
             </view>
             <!-- 城市信息 -->
@@ -159,6 +159,7 @@ import Icon from '@/components/Icon.vue'
 import SnowCard from '@/components/SnowCard.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
+import { snowLevelToFlakes } from '@/utils/snow'
 
 const allRegions = ref<SnowRegion[]>([])
 const loading = ref(false)
@@ -166,6 +167,8 @@ const hasError = ref(false)
 const errorMessage = ref('获取降雪数据失败，请检查网络连接')
 const selectedDate = ref('')
 const cityImages = ref<Record<string, string>>({})
+const userLat = ref(0)
+const userLon = ref(0)
 
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
@@ -200,9 +203,24 @@ const dateOptions = computed(() => {
 /** 图片缓存键前缀 */
 const IMG_CACHE_PREFIX = 'city_img_'
 
-/** 热门城市数据（从 DB 城市列表 + 天气数据合并） */
+/** 计算两点间距离（km），Haversine 公式 */
+function calcDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+/** 降雪等级权重，用于排序 */
+const SNOW_ORDER: Record<string, number> = { '暴雪': 4, '大雪': 3, '中雪': 2, '小雪': 1, '无': 0 }
+
+/** 热门城市数据（从 DB 城市列表 + 天气数据合并），有雪的按距离由近到远排前面，无雪的按距离由近到远排后面 */
 const hotCities = computed(() => {
-  return hotCityInfos.value.map((info) => {
+  const list = hotCityInfos.value.map((info) => {
     const found = allRegions.value.find((r: SnowRegion) => r.cityId === info.cityId)
     if (found) return found
     return {
@@ -220,6 +238,31 @@ const hotCities = computed(() => {
       updatedAt: '',
     }
   })
+  // 模拟数据：用于展示降雪效果
+  list.push({
+    cityId: 'mock_snow_001',
+    cityName: '阿勒泰',
+    province: '新疆',
+    latitude: 47.85,
+    longitude: 88.14,
+    temperature: -15,
+    humidity: 78,
+    windSpeed: 12,
+    windDirection: '西北风',
+    snowLevel: '大雪' as const,
+    visibility: 2,
+    updatedAt: new Date().toISOString(),
+  })
+
+  // 排序：有雪在前（按距离近到远），无雪在后（按距离近到远）
+  return list.sort((a, b) => {
+    const aSnow = (SNOW_ORDER[a.snowLevel] || 0) > 0 ? 1 : 0
+    const bSnow = (SNOW_ORDER[b.snowLevel] || 0) > 0 ? 1 : 0
+    if (aSnow !== bSnow) return bSnow - aSnow
+    const aDist = calcDistance(userLat.value, userLon.value, a.latitude, a.longitude)
+    const bDist = calcDistance(userLat.value, userLon.value, b.latitude, b.longitude)
+    return aDist - bDist
+  })
 })
 
 const snowingCities = computed(() => filterSnowingCities(allRegions.value))
@@ -234,34 +277,92 @@ function formatTime(isoString: string): string {
   } catch { return '' }
 }
 
-const centerLat = computed((): number => {
-  if (snowingCities.value.length > 0) {
-    const sum = snowingCities.value.reduce((acc: number, r: SnowRegion) => acc + r.latitude, 0)
-    return sum / snowingCities.value.length
+/** 地图上需要标记的下雪城市（合并 allRegions 和 hotCities 中有雪的） */
+const mapSnowCities = computed(() => {
+  const map = new Map<string, SnowRegion>()
+  // 先加 allRegions 中有雪的
+  for (const r of allRegions.value) {
+    if (r.snowLevel !== '无' && r.latitude && r.longitude) {
+      map.set(r.cityId, r)
+    }
   }
-  return 35.86
+  // 再加 hotCities 中有雪但不在 allRegions 里的（如模拟数据）
+  for (const c of hotCities.value) {
+    if (c.snowLevel !== '无' && c.latitude && c.longitude && !map.has(c.cityId)) {
+      map.set(c.cityId, c)
+    }
+  }
+  return Array.from(map.values())
+})
+
+/**
+ * 地图中心点：用边界框中心计算
+ * 多个点时取所有点的 min/max 经纬度的中点，比简单平均更合理
+ */
+const centerLat = computed((): number => {
+  const cities = mapSnowCities.value
+  if (cities.length === 0) return 35.86
+  const lats = cities.map((r) => r.latitude)
+  return (Math.min(...lats) + Math.max(...lats)) / 2
 })
 
 const centerLon = computed((): number => {
-  if (snowingCities.value.length > 0) {
-    const sum = snowingCities.value.reduce((acc: number, r: SnowRegion) => acc + r.longitude, 0)
-    return sum / snowingCities.value.length
-  }
-  return 104.20
+  const cities = mapSnowCities.value
+  if (cities.length === 0) return 104.20
+  const lons = cities.map((r) => r.longitude)
+  return (Math.min(...lons) + Math.max(...lons)) / 2
 })
 
+/**
+ * 根据标记点的经纬度跨度动态计算地图缩放级别
+ * 跨度越大 scale 越小，确保所有点都能显示在视野内
+ */
+const mapScale = computed((): number => {
+  const cities = mapSnowCities.value
+  if (cities.length === 0) return 5
+  if (cities.length === 1) return 10
+  const lats = cities.map((r) => r.latitude)
+  const lons = cities.map((r) => r.longitude)
+  const latSpan = Math.max(...lats) - Math.min(...lats)
+  const lonSpan = Math.max(...lons) - Math.min(...lons)
+  const maxSpan = Math.max(latSpan, lonSpan)
+  if (maxSpan > 30) return 3
+  if (maxSpan > 15) return 4
+  if (maxSpan > 8) return 5
+  if (maxSpan > 4) return 6
+  if (maxSpan > 2) return 7
+  if (maxSpan > 1) return 8
+  return 9
+})
+
+/** 雪花等级对应的 callout 样式 */
+function getSnowMarkerLabel(level: string): string {
+  switch (level) {
+    case '小雪': return '❄'
+    case '中雪': return '❄❄'
+    case '大雪': return '❄❄❄'
+    case '暴雪': return '❄❄❄❄'
+    default: return '❄'
+  }
+}
+
 const mapMarkers = computed(() => {
-  return snowingCities.value.map((region: SnowRegion, index: number) => ({
+  return mapSnowCities.value.map((region: SnowRegion, index: number) => ({
     id: index,
     latitude: region.latitude,
     longitude: region.longitude,
     title: region.cityName,
-    iconPath: '/static/marker-snow.png',
-    width: 30,
-    height: 30,
+    iconPath: '/static/tabs/home.png',
+    width: 1,
+    height: 1,
     callout: {
-      content: `${region.cityName}: ${region.snowLevel}`,
-      display: 'BYCLICK',
+      content: `${getSnowMarkerLabel(region.snowLevel)} ${region.cityName}`,
+      display: 'ALWAYS',
+      fontSize: 13,
+      borderRadius: 20,
+      padding: 8,
+      bgColor: '#1565C0',
+      color: '#FFFFFF',
     },
   }))
 })
@@ -372,8 +473,8 @@ function onHotCityClick(city: SnowRegion) {
 
 function onMarkerTap(e: { markerId?: number; detail?: { markerId?: number } }) {
   const markerId = e.markerId ?? e.detail?.markerId
-  if (markerId !== undefined && markerId >= 0 && markerId < snowingCities.value.length) {
-    const region = snowingCities.value[markerId]
+  if (markerId !== undefined && markerId >= 0 && markerId < mapSnowCities.value.length) {
+    const region = mapSnowCities.value[markerId]
     let url = `/pages/detail/detail?cityId=${region.cityId}`
     if (region.latitude && region.longitude) {
       url += `&latitude=${region.latitude}&longitude=${region.longitude}`
@@ -388,6 +489,16 @@ function onFabClick() {
 
 onLoad(async () => {
   selectedDate.value = dateOptions.value[0]?.value ?? ''
+  // 获取用户位置
+  try {
+    const res = await new Promise<UniApp.GetLocationSuccess>((resolve, reject) => {
+      uni.getLocation({ type: 'gcj02', success: resolve, fail: reject })
+    })
+    userLat.value = res.latitude
+    userLon.value = res.longitude
+  } catch {
+    console.warn('获取用户位置失败，排序将不使用距离')
+  }
   // 先从 DB 加载城市列表
   await loadCityList()
   hotCityInfos.value = getHotCities()
