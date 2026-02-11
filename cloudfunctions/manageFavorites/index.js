@@ -37,6 +37,7 @@ async function handleAddAction(openId, cityId, cityName, latitude, longitude) {
       cityName,
       latitude: latitude || 0,
       longitude: longitude || 0,
+      subscribed: false,
       createdAt: new Date().toISOString(),
     },
   })
@@ -85,6 +86,7 @@ async function handleListAction(openId) {
     cityName: item.cityName,
     latitude: item.latitude || 0,
     longitude: item.longitude || 0,
+    subscribed: item.subscribed || false,
     snowStatus: '',
   }))
 
@@ -97,14 +99,35 @@ async function handleListAction(openId) {
 }
 
 /**
+ * 处理 subscribe action：开启/关闭城市降雪提醒
+ *
+ * @param {string} openId - 用户 OpenID
+ * @param {string} cityId - 城市 ID
+ * @param {boolean} subscribed - 是否订阅
+ * @returns {Promise<Object>} 操作结果
+ */
+async function handleSubscribeAction(openId, cityId, subscribed) {
+  const { stats } = await favoritesCollection
+    .where({ openId, cityId })
+    .update({ data: { subscribed: !!subscribed } })
+
+  if (stats.updated === 0) {
+    return { code: 404, message: '请先收藏该城市' }
+  }
+
+  return { code: 0, message: subscribed ? '已开启降雪提醒' : '已关闭降雪提醒' }
+}
+
+/**
  * 云函数入口
  * @param {Object} event - 请求参数
- * @param {string} event.action - 操作类型: "add" | "remove" | "list"
- * @param {string} [event.cityId] - 城市 ID（add/remove 必填）
+ * @param {string} event.action - 操作类型: "add" | "remove" | "list" | "subscribe"
+ * @param {string} [event.cityId] - 城市 ID（add/remove/subscribe 必填）
  * @param {string} [event.cityName] - 城市名称（add 必填）
+ * @param {boolean} [event.subscribed] - 是否订阅（subscribe 必填）
  */
 exports.main = async (event, context) => {
-  const { action, cityId, cityName, latitude, longitude } = event
+  const { action, cityId, cityName, latitude, longitude, subscribed } = event
   const wxContext = cloud.getWXContext()
   const openId = wxContext.OPENID
 
@@ -128,6 +151,11 @@ exports.main = async (event, context) => {
       return await handleRemoveAction(openId, cityId)
     } else if (action === 'list') {
       return await handleListAction(openId)
+    } else if (action === 'subscribe') {
+      if (!cityId) {
+        return { code: 400, message: '缺少 cityId 参数' }
+      }
+      return await handleSubscribeAction(openId, cityId, subscribed)
     } else {
       return { code: 400, message: '无效的 action 参数' }
     }

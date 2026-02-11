@@ -5,7 +5,8 @@
     <!-- 标题 -->
     <view class="px-4 pt-4 pb-2">
       <text class="text-headline-md font-bold text-on-surface block">西门问雪</text>
-      <text class="text-body-md text-on-surface-variant block mt-1">发现正在下雪的地方</text>
+      <text class="text-body-md text-on-surface-variant block mt-1">当天气预报只说'雨夹雪'，</text> 
+        <text class="text-body-md text-on-surface-variant block mt-1">我们告诉你'现在出发，还能赶上长安的瑞雪'。</text>
     </view>
 
     <!-- 日期选择 -->
@@ -37,6 +38,7 @@
           :longitude="centerLon"
           :markers="mapMarkers"
           :scale="mapScale"
+          :enable-satellite="true"
           style="width: 100%; height: 260px;"
           @markertap="onMarkerTap"
         />
@@ -54,9 +56,48 @@
     <ErrorRetry v-else-if="hasError" :message="errorMessage" @retry="loadData" />
 
     <template v-else>
+      <!-- 降雪提醒横幅 -->
+      <view class="px-4 mb-3">
+        <!-- 有订阅且即将降雪 -->
+        <view
+          v-if="snowAlertCity"
+          class="rounded-3xl bg-primary-container px-4 py-3 flex items-center justify-between"
+          hover-class="hover-opacity-80"
+          @click="onAlertBannerClick"
+        >
+          <view class="flex items-center flex-1 min-w-0">
+            <text style="font-size: 20px;" class="mr-3">❄</text>
+            <view class="flex-1 min-w-0">
+              <text class="text-title-sm text-on-surface block">你关注的「{{ snowAlertCity.cityName }}」即将降雪</text>
+              <text class="text-body-sm text-on-surface-variant block mt-1">未来3天预计有{{ snowAlertCity.snowLevel }}，点击查看</text>
+            </view>
+          </view>
+          <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
+        </view>
+        <!-- 未订阅任何城市 -->
+        <view
+          v-else-if="!hasAnySubscription"
+          class="rounded-3xl bg-surface-container px-4 py-3 flex items-center justify-between"
+        >
+          <view class="flex items-center flex-1 min-w-0">
+            <text style="font-size: 20px;" class="mr-3">🔔</text>
+            <view class="flex-1 min-w-0">
+              <text class="text-title-sm text-on-surface block">开启降雪提醒</text>
+              <text class="text-body-sm text-on-surface-variant block mt-1">订阅城市，未来降雪提前通知你</text>
+            </view>
+          </view>
+          <view
+            class="rounded-full bg-primary px-4 py-1 flex-shrink-0"
+            hover-class="hover-opacity-80"
+            @click="onGoSubscribe"
+          >
+            <text class="text-label-md text-white">去订阅</text>
+          </view>
+        </view>
+      </view>
+
       <!-- 热门旅游城市 -->
       <view class="px-4 mb-4" style="padding-bottom: 180px;">
-        <text class="text-title-md text-on-surface block mb-3">热门旅游城市</text>
         <view class="flex flex-col gap-3">
           <view
             v-for="city in hotCities"
@@ -100,18 +141,31 @@
                     <Icon name="wind" size="12px" class="text-on-surface-variant mr-1" />
                     <text class="text-body-sm text-on-surface-variant">{{ city.windSpeed }}km/h</text>
                   </view>
-                  <Icon name="chevron-right" size="14px" class="text-on-surface-variant ml-3" />
                 </view>
               </view>
-              <view class="flex items-center justify-between">
-                <view v-if="getScenics(city.cityId).length > 0" class="flex flex-wrap flex-1">
+              <view class="flex items-center">
+                <view v-if="getScenics(city.cityId).length > 0" class="flex flex-wrap" style="flex: 1;">
                   <text
                     v-for="spot in getScenics(city.cityId)"
                     :key="spot"
                     class="text-label-sm text-primary mr-2 mb-1 px-2 py-0-5 rounded-full bg-primary-container"
                   >{{ spot }}</text>
                 </view>
-                <text v-if="city.updatedAt" class="text-body-sm text-on-surface-variant flex-shrink-0">{{ formatTime(city.updatedAt) }}</text>
+                <view v-else style="flex: 1;"></view>
+                <!-- 订阅铃铛 -->
+                <view
+                  class="flex items-center justify-center rounded-full"
+                  style="width: 44px; height: 44px; flex-shrink: 0;"
+                  hover-class="hover-opacity-60"
+                  @click.stop="onToggleSubscribe(city)"
+                >
+                  <Icon
+                    name="bell"
+                    :type="isSubscribed(city.cityId) ? 'solid' : 'regular'"
+                    size="22px"
+                    :class="isSubscribed(city.cityId) ? 'text-primary' : 'text-on-surface-variant'"
+                  />
+                </view>
               </view>
             </view>
           </view>
@@ -129,7 +183,9 @@
           v-for="region in snowingCities"
           :key="region.cityId"
           :snow-region="region"
+          :subscribed="isSubscribed(region.cityId)"
           @click="onCardClick"
+          @subscribe="onToggleSubscribe"
         />
       </view>
     </template>
@@ -169,6 +225,12 @@ const selectedDate = ref('')
 const cityImages = ref<Record<string, string>>({})
 const userLat = ref(0)
 const userLon = ref(0)
+
+/** 用户已订阅的城市 ID 集合 */
+const subscribedCityIds = ref<Set<string>>(new Set())
+/** 用户订阅列表（含订阅状态） */
+interface FavItem { cityId: string; cityName: string; subscribed: boolean }
+const userFavorites = ref<FavItem[]>([])
 
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
@@ -240,7 +302,7 @@ const hotCities = computed(() => {
   })
   // 模拟数据：用于展示降雪效果
   list.push({
-    cityId: 'mock_snow_001',
+    cityId: '101131410',
     cityName: '阿勒泰',
     province: '新疆',
     latitude: 47.85,
@@ -377,6 +439,130 @@ function getSnowBadgeBg(level: string): string {
   }
 }
 
+/** 是否已订阅某城市 */
+function isSubscribed(cityId: string): boolean {
+  return subscribedCityIds.value.has(cityId)
+}
+
+/** 是否有任何订阅 */
+const hasAnySubscription = computed(() => subscribedCityIds.value.size > 0)
+
+/** 已订阅城市中即将降雪的（用于横幅展示） */
+const snowAlertCity = computed(() => {
+  for (const fav of userFavorites.value) {
+    if (!fav.subscribed) continue
+    const region = hotCities.value.find((c) => c.cityId === fav.cityId)
+    if (region && region.snowLevel !== '无') {
+      return { cityId: region.cityId, cityName: fav.cityName, snowLevel: region.snowLevel }
+    }
+    // 也检查 allRegions
+    const fromAll = allRegions.value.find((r) => r.cityId === fav.cityId && r.snowLevel !== '无')
+    if (fromAll) {
+      return { cityId: fromAll.cityId, cityName: fav.cityName, snowLevel: fromAll.snowLevel }
+    }
+  }
+  return null
+})
+
+/** 加载用户订阅状态 */
+async function loadSubscriptions() {
+  try {
+    // #ifdef MP-WEIXIN
+    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
+    const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string; cityName: string; subscribed?: boolean }> } }
+    const favs = result.data?.favorites ?? []
+    userFavorites.value = favs.map((f) => ({ cityId: f.cityId, cityName: f.cityName, subscribed: !!f.subscribed }))
+    subscribedCityIds.value = new Set(favs.filter((f) => f.subscribed).map((f) => f.cityId))
+    // #endif
+  } catch {}
+}
+
+/** 切换订阅状态 */
+async function onToggleSubscribe(city: SnowRegion) {
+  const currentlySubscribed = isSubscribed(city.cityId)
+  const newState = !currentlySubscribed
+
+  // 如果是开启订阅，先请求微信订阅消息授权
+  if (newState) {
+    try {
+      // #ifdef MP-WEIXIN
+      await wx.requestSubscribeMessage({
+        tmplIds: ['your_template_id'],  // TODO: 替换为实际的模板 ID
+      })
+      // #endif
+    } catch {
+      // 用户拒绝授权，仍然可以在 app 内提醒
+    }
+  }
+
+  try {
+    // 如果还没订阅，先添加
+    const isFav = userFavorites.value.some((f) => f.cityId === city.cityId)
+    if (!isFav) {
+      // #ifdef MP-WEIXIN
+      await wx.cloud.callFunction({
+        name: 'manageFavorites',
+        data: {
+          action: 'add',
+          cityId: city.cityId,
+          cityName: city.cityName,
+          latitude: city.latitude,
+          longitude: city.longitude,
+        },
+      })
+      // #endif
+    }
+
+    // 更新订阅状态
+    // #ifdef MP-WEIXIN
+    await wx.cloud.callFunction({
+      name: 'manageFavorites',
+      data: { action: 'subscribe', cityId: city.cityId, subscribed: newState },
+    })
+    // #endif
+
+    // 更新本地状态
+    if (newState) {
+      subscribedCityIds.value.add(city.cityId)
+    } else {
+      subscribedCityIds.value.delete(city.cityId)
+    }
+    // 触发响应式更新
+    subscribedCityIds.value = new Set(subscribedCityIds.value)
+
+    // 更新 userFavorites
+    const existing = userFavorites.value.find((f) => f.cityId === city.cityId)
+    if (existing) {
+      existing.subscribed = newState
+    } else {
+      userFavorites.value.push({ cityId: city.cityId, cityName: city.cityName, subscribed: newState })
+    }
+
+    uni.showToast({ title: newState ? '已开启降雪提醒' : '已关闭提醒', icon: 'success', duration: 1500 })
+  } catch {
+    uni.showToast({ title: '操作失败，请重试', icon: 'none', duration: 1500 })
+  }
+}
+
+/** 横幅点击：跳转到即将降雪的城市详情 */
+function onAlertBannerClick() {
+  if (!snowAlertCity.value) return
+  const city = hotCities.value.find((c) => c.cityId === snowAlertCity.value!.cityId)
+    || allRegions.value.find((r) => r.cityId === snowAlertCity.value!.cityId)
+  if (city) {
+    let url = `/pages/detail/detail?cityId=${city.cityId}`
+    if (city.latitude && city.longitude) {
+      url += `&latitude=${city.latitude}&longitude=${city.longitude}`
+    }
+    uni.navigateTo({ url })
+  }
+}
+
+/** 去订阅：跳转到订阅页 */
+function onGoSubscribe() {
+  uni.switchTab({ url: '/pages/favorites/favorites' })
+}
+
 /**
  * 获取城市景区图片（优先读缓存，没有则调用 AI 生成）
  */
@@ -419,6 +605,12 @@ async function loadCityImage(cityId: string, cityName: string) {
 async function loadAllCityImages() {
   for (const info of hotCityInfos.value) {
     await loadCityImage(info.cityId, info.cityName)
+  }
+  // 加载 hotCities 中不在 hotCityInfos 里的（如模拟数据）
+  for (const city of hotCities.value) {
+    if (!hotCityInfos.value.some((info) => info.cityId === city.cityId)) {
+      await loadCityImage(city.cityId, city.cityName)
+    }
   }
 }
 
@@ -505,6 +697,7 @@ onLoad(async () => {
   // 再加载天气数据和图片
   loadData()
   loadAllCityImages()
+  loadSubscriptions()
 })
 </script>
 

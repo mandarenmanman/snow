@@ -39,12 +39,14 @@ const solidMap: Record<string, string> = {
   'chevron-right': '\uf054',
   'arrow-left': '\uf060',
   'mountain-sun': '\ue52f',
+  'bell': '\uf0f3',
 }
 
 const regularMap: Record<string, string> = {
   'star': '\uf005',
   'heart': '\uf004',
   'snowflake': '\uf2dc',
+  'bell': '\uf0f3',
 }
 
 const unicode = computed(() => {

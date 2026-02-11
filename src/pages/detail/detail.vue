@@ -1,6 +1,6 @@
 <template>
   <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
-    <!-- 返回 + 收藏 -->
+    <!-- 返回 + 订阅 -->
     <view class="px-4 pt-4 pb-2 flex items-center justify-between">
       <view class="flex items-center flex-1">
         <view
@@ -261,7 +261,7 @@ async function toggleFavorite() {
     })
     // #endif
     isFavorited.value = !isFavorited.value
-    uni.showToast({ title: isFavorited.value ? '已收藏' : '已取消收藏', icon: 'success', duration: 1500 })
+    uni.showToast({ title: isFavorited.value ? '已订阅' : '已取消订阅', icon: 'success', duration: 1500 })
   } catch {
     uni.showToast({ title: '操作失败，请重试', icon: 'none', duration: 1500 })
   }

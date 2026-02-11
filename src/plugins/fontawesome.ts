@@ -28,6 +28,7 @@ import {
   faCalendarDays,
   faCircleExclamation,
   faArrowsRotate,
+  faBell,
 } from '@fortawesome/free-solid-svg-icons'
 
 // Regular 图标（far）— 用于收藏等切换状态
@@ -35,6 +36,7 @@ import {
   faHeart as farHeart,
   faStar as farStar,
   faSnowflake as farSnowflake,
+  faBell as farBell,
 } from '@fortawesome/free-regular-svg-icons'
 
 // 批量注册所有图标到 library
@@ -58,10 +60,12 @@ library.add(
   faCalendarDays,
   faCircleExclamation,
   faArrowsRotate,
+  faBell,
   // Regular
   farHeart,
   farStar,
   farSnowflake,
+  farBell,
 )
 
 /**

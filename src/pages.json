@@ -64,7 +64,7 @@
       },
       {
         "pagePath": "pages/favorites/favorites",
-        "text": "收藏",
+        "text": "订阅",
         "iconPath": "static/tabs/star.png",
         "selectedIconPath": "static/tabs/star-active.png"
       }

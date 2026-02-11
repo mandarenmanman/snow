@@ -3,20 +3,20 @@
     <OfflineBanner />
 
     <view class="px-4 pt-4 pb-2">
-      <text class="text-headline-md font-bold text-on-surface block">我的收藏</text>
-      <text class="text-body-md text-on-surface-variant block mt-1">{{ favorites.length > 0 ? `已收藏 ${favorites.length} 个城市` : '关注城市的降雪状态' }}</text>
+      <text class="text-headline-md font-bold text-on-surface block">我的订阅</text>
+      <text class="text-body-md text-on-surface-variant block mt-1">{{ favorites.length > 0 ? `已订阅 ${favorites.length} 个城市` : '订阅城市，降雪提前通知你' }}</text>
     </view>
 
     <view v-if="loading" class="flex flex-col items-center justify-center py-12">
       <view class="mb-3">
         <Icon name="snowflake" size="32px" class="text-primary animate-spin" />
       </view>
-      <text class="text-body-md text-on-surface-variant">正在加载收藏列表...</text>
+      <text class="text-body-md text-on-surface-variant">正在加载订阅列表...</text>
     </view>
 
     <ErrorRetry v-else-if="hasError" :message="errorMessage" @retry="loadFavorites" />
 
-    <EmptyState v-else-if="favorites.length === 0" message="还没有收藏城市，去首页或搜索页添加吧" icon="star" />
+    <EmptyState v-else-if="favorites.length === 0" message="还没有订阅城市，去首页或搜索页添加吧" icon="bell" />
 
     <view v-else class="px-4 pb-6">
       <view
@@ -35,7 +35,7 @@
             style="width: 100%; height: 120px;"
           />
           <view v-else class="flex items-center justify-center bg-surface-container-high" style="width: 100%; height: 120px;">
-            <Icon name="star" size="28px" class="text-outline-variant" />
+            <Icon name="bell" size="28px" class="text-outline-variant" />
           </view>
           <!-- 降雪角标 -->
           <view
@@ -95,7 +95,7 @@ const favorites = ref<FavoriteItem[]>([])
 const cityImages = ref<Record<string, string>>({})
 const loading = ref(false)
 const hasError = ref(false)
-const errorMessage = ref('获取收藏列表失败，请检查网络连接')
+const errorMessage = ref('获取订阅列表失败，请检查网络连接')
 
 const { totalHeight } = getNavBarInfo()
 const navPadding = `${totalHeight}px`
@@ -130,7 +130,7 @@ async function loadFavorites() {
     }
   } catch (err) {
     hasError.value = true
-    errorMessage.value = '获取收藏列表失败，请检查网络连接'
+    errorMessage.value = '获取订阅列表失败，请检查网络连接'
   } finally {
     loading.value = false
   }
@@ -177,8 +177,8 @@ function onFavoriteClick(item: FavoriteItem) {
 
 async function onRemove(item: FavoriteItem) {
   uni.showModal({
-    title: '取消收藏',
-    content: `确定取消收藏「${item.cityName}」吗？`,
+    title: '取消订阅',
+    content: `确定取消订阅「${item.cityName}」吗？`,
     success: async (res) => {
       if (!res.confirm) return
       try {
@@ -189,7 +189,7 @@ async function onRemove(item: FavoriteItem) {
         })
         // #endif
         favorites.value = favorites.value.filter((f) => f.cityId !== item.cityId)
-        uni.showToast({ title: '已取消收藏', icon: 'success', duration: 1500 })
+        uni.showToast({ title: '已取消订阅', icon: 'success', duration: 1500 })
       } catch {
         uni.showToast({ title: '操作失败', icon: 'none', duration: 1500 })
       }

@@ -57,21 +57,35 @@ async function loadCitiesFromDB(filter) {
  * 将和风天气天气代码映射为降雪等级
  *
  * 和风天气降雪相关天气代码:
- * - 400, 401, 402: 小雪
- * - 403, 404: 中雪
- * - 405, 406: 大雪
- * - 407, 408, 409, 410: 暴雪
+ * - 400: 小雪
+ * - 401, 408: 中雪（含小到中雪）
+ * - 402, 409: 大雪（含中到大雪）
+ * - 403, 410: 暴雪（含大到暴雪）
+ * - 404, 405, 406, 456: 雨夹雪类 → 小雪
+ * - 407, 457: 阵雪 → 小雪
+ * - 499: 雪 → 小雪
  *
  * @param {number|string} code - 和风天气天气代码
  * @returns {string} 降雪等级
  */
 function mapWeatherCodeToSnowLevel(code) {
-  const numCode = Number(code)
-  if (numCode >= 400 && numCode <= 402) return '小雪'
-  if (numCode >= 403 && numCode <= 404) return '中雪'
-  if (numCode >= 405 && numCode <= 406) return '大雪'
-  if (numCode >= 407 && numCode <= 410) return '暴雪'
-  return '无'
+  const map = {
+    400: '小雪',
+    401: '中雪',
+    402: '大雪',
+    403: '暴雪',
+    404: '小雪',   // 雨夹雪
+    405: '小雪',   // 雨雪天气
+    406: '小雪',   // 阵雨夹雪
+    407: '小雪',   // 阵雪
+    408: '中雪',   // 小到中雪
+    409: '大雪',   // 中到大雪
+    410: '暴雪',   // 大到暴雪
+    456: '小雪',   // 阵雨夹雪
+    457: '小雪',   // 阵雪
+    499: '小雪',   // 雪
+  }
+  return map[Number(code)] || '无'
 }
 
 /**

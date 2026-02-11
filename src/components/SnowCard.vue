@@ -13,6 +13,19 @@
       </view>
       <view class="flex items-center">
         <Icon name="snowflake" :size="snowflakeSize" :class="snowflakeColorClass" />
+        <view
+          class="flex items-center justify-center rounded-full ml-2"
+          style="width: 32px; height: 32px;"
+          hover-class="hover-opacity-60"
+          @click.stop="$emit('subscribe', snowRegion)"
+        >
+          <Icon
+            name="bell"
+            :type="subscribed ? 'solid' : 'regular'"
+            size="16px"
+            :class="subscribed ? 'text-primary' : 'text-on-surface-variant'"
+          />
+        </view>
       </view>
     </view>
 
@@ -43,10 +56,12 @@ import { snowLevelToFlakes } from '@/utils/snow'
 
 const props = defineProps<{
   snowRegion: SnowRegion
+  subscribed?: boolean
 }>()
 
 defineEmits<{
   (e: 'click', region: SnowRegion): void
+  (e: 'subscribe', region: SnowRegion): void
 }>()
 
 const cardBgClass = computed(() => {
