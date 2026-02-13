@@ -176,7 +176,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import type { SnowRegion, SnowLevel } from '@/models/types'
 import { fetchSnowRegions, fetchSnowRegionsRemote, filterSnowingCities } from '@/services/snow-service'
 import { getNavBarInfo } from '@/utils/navbar'
@@ -527,49 +527,55 @@ async function onToggleSubscribe(city: SnowRegion) {
   }
 
   try {
-    // 如果还没订阅，先添加
-    const isFav = userFavorites.value.some((f) => f.cityId === city.cityId)
-    if (!isFav) {
+    if (newState) {
+      // 订阅：先添加收藏（如果没有），再设置 subscribed
+      const isFav = userFavorites.value.some((f) => f.cityId === city.cityId)
+      if (!isFav) {
+        // #ifdef MP-WEIXIN
+        await wx.cloud.callFunction({
+          name: 'manageFavorites',
+          data: {
+            action: 'add',
+            cityId: city.cityId,
+            cityName: city.cityName,
+            latitude: city.latitude,
+            longitude: city.longitude,
+          },
+        })
+        // #endif
+      }
       // #ifdef MP-WEIXIN
       await wx.cloud.callFunction({
         name: 'manageFavorites',
-        data: {
-          action: 'add',
-          cityId: city.cityId,
-          cityName: city.cityName,
-          latitude: city.latitude,
-          longitude: city.longitude,
-        },
+        data: { action: 'subscribe', cityId: city.cityId, subscribed: true },
+      })
+      // #endif
+    } else {
+      // 取消订阅：直接删除收藏记录
+      // #ifdef MP-WEIXIN
+      await wx.cloud.callFunction({
+        name: 'manageFavorites',
+        data: { action: 'remove', cityId: city.cityId },
       })
       // #endif
     }
 
-    // 更新订阅状态
-    // #ifdef MP-WEIXIN
-    await wx.cloud.callFunction({
-      name: 'manageFavorites',
-      data: { action: 'subscribe', cityId: city.cityId, subscribed: newState },
-    })
-    // #endif
-
     // 更新本地状态
     if (newState) {
       subscribedCityIds.value.add(city.cityId)
+      const existing = userFavorites.value.find((f) => f.cityId === city.cityId)
+      if (existing) {
+        existing.subscribed = true
+      } else {
+        userFavorites.value.push({ cityId: city.cityId, cityName: city.cityName, subscribed: true })
+      }
     } else {
       subscribedCityIds.value.delete(city.cityId)
+      userFavorites.value = userFavorites.value.filter((f) => f.cityId !== city.cityId)
     }
-    // 触发响应式更新
     subscribedCityIds.value = new Set(subscribedCityIds.value)
 
-    // 更新 userFavorites
-    const existing = userFavorites.value.find((f) => f.cityId === city.cityId)
-    if (existing) {
-      existing.subscribed = newState
-    } else {
-      userFavorites.value.push({ cityId: city.cityId, cityName: city.cityName, subscribed: newState })
-    }
-
-    uni.showToast({ title: newState ? '已开启降雪提醒' : '已关闭提醒', icon: 'success', duration: 1500 })
+    uni.showToast({ title: newState ? '已开启降雪提醒' : '已取消订阅', icon: 'success', duration: 1500 })
   } catch {
     uni.showToast({ title: '操作失败，请重试', icon: 'none', duration: 1500 })
   }
@@ -738,6 +744,11 @@ onLoad(async () => {
   // 再加载天气数据和图片
   loadData()
   loadAllCityImages()
+  loadSubscriptions()
+})
+
+onShow(() => {
+  // 每次页面显示时刷新订阅状态（从 detail 页返回等场景）
   loadSubscriptions()
 })
 </script>

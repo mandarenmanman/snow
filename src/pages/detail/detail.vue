@@ -196,35 +196,62 @@ async function loadDetail() {
   }
 }
 
+/** 微信订阅消息模板 ID */
+const SNOW_ALERT_TMPL_ID = 'Qd_NN-RSHCa2reTPIC7MHo_PMwN0MLLK1Y4jfYlAths'
+
 async function checkFavoriteStatus() {
   if (!cityId.value) return
   try {
     // #ifdef MP-WEIXIN
     const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
-    const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string }> } }
+    const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string; subscribed?: boolean }> } }
     const favs = (result.code === 0 && result.data?.favorites) ? result.data.favorites : []
-    isFavorited.value = favs.some((fav) => fav.cityId === cityId.value)
+    const fav = favs.find((f) => f.cityId === cityId.value)
+    isFavorited.value = !!(fav && fav.subscribed)
     // #endif
   } catch {}
 }
 
 async function toggleFavorite() {
-  const action = isFavorited.value ? 'remove' : 'add'
   try {
-    // #ifdef MP-WEIXIN
-    await wx.cloud.callFunction({
-      name: 'manageFavorites',
-      data: {
-        action,
-        cityId: cityId.value,
-        cityName: cityName.value || cityDetail.value?.cityName || '',
-        latitude: latitude.value || undefined,
-        longitude: longitude.value || undefined,
-      },
-    })
-    // #endif
-    isFavorited.value = !isFavorited.value
-    uni.showToast({ title: isFavorited.value ? '已订阅' : '已取消订阅', icon: 'success', duration: 1500 })
+    if (!isFavorited.value) {
+      // 订阅：拉起微信订阅消息授权
+      try {
+        // #ifdef MP-WEIXIN
+        await wx.requestSubscribeMessage({ tmplIds: [SNOW_ALERT_TMPL_ID] })
+        // #endif
+      } catch {}
+
+      // 添加收藏 + 设置 subscribed
+      // #ifdef MP-WEIXIN
+      await wx.cloud.callFunction({
+        name: 'manageFavorites',
+        data: {
+          action: 'add',
+          cityId: cityId.value,
+          cityName: cityName.value || cityDetail.value?.cityName || '',
+          latitude: latitude.value || undefined,
+          longitude: longitude.value || undefined,
+        },
+      })
+      await wx.cloud.callFunction({
+        name: 'manageFavorites',
+        data: { action: 'subscribe', cityId: cityId.value, subscribed: true },
+      })
+      // #endif
+      isFavorited.value = true
+      uni.showToast({ title: '已订阅', icon: 'success', duration: 1500 })
+    } else {
+      // 取消订阅：删除收藏记录
+      // #ifdef MP-WEIXIN
+      await wx.cloud.callFunction({
+        name: 'manageFavorites',
+        data: { action: 'remove', cityId: cityId.value },
+      })
+      // #endif
+      isFavorited.value = false
+      uni.showToast({ title: '已取消订阅', icon: 'success', duration: 1500 })
+    }
   } catch {
     uni.showToast({ title: '操作失败，请重试', icon: 'none', duration: 1500 })
   }

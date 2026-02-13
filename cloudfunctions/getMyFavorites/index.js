@@ -95,7 +95,7 @@ exports.main = async (event, context) => {
 
   try {
     const { data } = await db.collection('favorites')
-      .where({ openId })
+      .where({ openId, subscribed: true })
       .orderBy('createdAt', 'desc')
       .get()
 
