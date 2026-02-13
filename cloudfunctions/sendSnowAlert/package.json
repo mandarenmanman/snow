@@ -4,7 +4,7 @@
   "description": "降雪提醒通知云函数",
   "main": "index.js",
   "dependencies": {
-    "wx-server-sdk": "~2.6.3",
+    "wx-server-sdk": "latest",
     "axios": "^1.6.0"
   }
 }

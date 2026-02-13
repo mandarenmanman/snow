@@ -194,8 +194,6 @@ const loading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取降雪数据失败，请检查网络连接')
 const cityImages = ref<Record<string, string>>({})
-const userLat = ref(0)
-const userLon = ref(0)
 
 /** 当前日期+时间 MM/DD HH:MM */
 const currentTime = ref('')
@@ -238,18 +236,6 @@ function getCityPrompt(cityId: string, cityName: string): string {
 
 /** 图片缓存键前缀 */
 const IMG_CACHE_PREFIX = 'city_img_'
-
-/** 计算两点间距离（km），Haversine 公式 */
-function calcDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 /** 降雪等级权重，用于排序 */
 const SNOW_ORDER: Record<string, number> = { '暴雪': 4, '大雪': 3, '中雪': 2, '小雪': 1, '无': 0 }
@@ -326,10 +312,8 @@ const hotCities = computed(() => {
       const bDays = b.snowForecast!.daysFromNow
       if (aDays !== bDays) return aDays - bDays
     }
-    // 同级按距离
-    const aDist = calcDistance(userLat.value, userLon.value, a.latitude, a.longitude)
-    const bDist = calcDistance(userLat.value, userLon.value, b.latitude, b.longitude)
-    return aDist - bDist
+    // 同级按城市名排序
+    return a.cityName.localeCompare(b.cityName)
   })
 })
 
@@ -728,16 +712,6 @@ function onFabClick() {
 }
 
 onLoad(async () => {
-  // 获取用户位置
-  try {
-    const res = await new Promise<UniApp.GetLocationSuccess>((resolve, reject) => {
-      uni.getLocation({ type: 'gcj02', success: resolve, fail: reject })
-    })
-    userLat.value = res.latitude
-    userLon.value = res.longitude
-  } catch {
-    console.warn('获取用户位置失败，排序将不使用距离')
-  }
   // 先从 DB 加载城市列表
   await loadCityList()
   hotCityInfos.value = getHotCities()

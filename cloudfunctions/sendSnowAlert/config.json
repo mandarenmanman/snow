@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "openapi": [
+      "subscribeMessage.send"
+    ]
+  },
+  "triggers": [
+    {
+      "name": "snowCheckTimer",
+      "type": "timer",
+      "config": "0 2 19 * * * *"
+    }
+  ]
+}
