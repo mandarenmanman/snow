@@ -31,6 +31,7 @@
       "style": {
         "navigationStyle": "custom",
         "renderer": "skyline",
+        "componentFramework": "glass-easel",
         "disableScroll": true
       }
     }
