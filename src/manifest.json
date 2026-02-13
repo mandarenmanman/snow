@@ -20,7 +20,15 @@
     "optimization": {
       "subPackages": true
     },
-    "cloudfunctionRoot": "cloudfunctions/"
+    "cloudfunctionRoot": "cloudfunctions/",
+    "rendererOptions": {
+      "skyline": {
+        "defaultDisplayBlock": true,
+        "disableABTest": true,
+        "sdkVersionBegin": "3.0.0",
+        "sdkVersionEnd": "15.255.255"
+      }
+    }
   },
   "h5": {
     "devServer": {
