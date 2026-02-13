@@ -58,6 +58,18 @@
             </view>
           </view>
 
+          <!-- 未来降雪预报 -->
+          <view v-if="snowDays.length > 0" class="card-snow-forecast">
+            <view class="card-snow-forecast-header">
+              <text class="fa-icon fa-snowflake card-snow-forecast-icon"></text>
+              <text class="card-snow-forecast-title">未来降雪</text>
+            </view>
+            <view v-for="(day, idx) in snowDays" :key="idx" class="card-snow-forecast-row">
+              <text class="card-snow-forecast-label">{{ day.label }}</text>
+              <text class="card-snow-forecast-level">{{ day.level }}</text>
+            </view>
+          </view>
+
           <!-- 用户心情 -->
           <view v-if="shareText" class="card-quote">
             <text class="card-quote-text">"{{ shareText }}"</text>
@@ -122,6 +134,7 @@ const windDirection = ref('')
 const shareText = ref('')
 const isGenerating = ref(false)
 const qrcodeUrl = ref('/static/qrcode.jpg')
+const snowDays = ref<Array<{ label: string; level: string }>>([])
 
 const { statusBarHeight, totalHeight } = getNavBarInfo()
 const navPadding = `${statusBarHeight}px`
@@ -159,14 +172,8 @@ async function handleShare() {
                   uni.hideLoading()
                   wx.showShareImageMenu({
                     path: filePath,
-                    success: () => console.log('分享成功'),
-                    fail: () => {
-                      uni.saveImageToPhotosAlbum({
-                        filePath,
-                        success: () => uni.showToast({ title: '已保存到相册', icon: 'success' }),
-                        fail: () => uni.showToast({ title: '请授权相册权限', icon: 'none' }),
-                      })
-                    },
+                    style: 'v2',
+                    entrys: ['shareAppMessage', 'shareTimeline', 'addToFavorites', 'saveImageToPhotosAlbum'],
                   })
                 },
                 fail: (err: any) => {
@@ -218,6 +225,14 @@ onLoad((options) => {
     humidity.value = options.humidity || ''
     windSpeed.value = options.windSpeed || ''
     windDirection.value = decodeURIComponent(options.windDirection || '')
+    // 解析未来降雪预报: "label1|level1,label2|level2"
+    if (options.snowDays) {
+      const raw = decodeURIComponent(options.snowDays)
+      snowDays.value = raw.split(',').map((s) => {
+        const [label, level] = s.split('|')
+        return { label: label || '', level: level || '' }
+      }).filter((d) => d.label && d.level)
+    }
   }
   loadQRCode()
 })
@@ -397,8 +412,36 @@ async function loadQRCode() {
   background-color: rgba(255,255,255,0.15);
 }
 
-/* ---- 引用 ---- */
-.card-quote {
+/* ---- 未来降雪 ---- */
+.card-snow-forecast {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background-color: rgba(255,255,255,0.1);
+  border-radius: 12px;
+  position: relative; z-index: 1;
+}
+.card-snow-forecast-header {
+  display: flex; flex-direction: row; align-items: center;
+  margin-bottom: 6px;
+}
+.card-snow-forecast-icon {
+  font-size: 11px; color: rgba(255,255,255,0.7); margin-right: 5px;
+}
+.card-snow-forecast-title {
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8);
+}
+.card-snow-forecast-row {
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+  padding: 3px 0;
+}
+.card-snow-forecast-label {
+  font-size: 11px; color: rgba(255,255,255,0.65);
+}
+.card-snow-forecast-level {
+  font-size: 11px; font-weight: 500; color: #fff;
+}
+
+/* ---- 引用 ---- */.card-quote {
   margin-top: 16px;
   padding: 10px 14px;
   background-color: rgba(255,255,255,0.1);

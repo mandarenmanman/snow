@@ -190,8 +190,13 @@ function onShare() {
     `humidity=${c.current.humidity}`,
     `windSpeed=${c.current.windSpeed}`,
     `windDirection=${encodeURIComponent(c.current.windDirection || '')}`,
-  ].join('&')
-  uni.navigateTo({ url: `/pages/share/share?${params}` })
+  ]
+  // 传未来降雪预报（最多3条），格式: label1|level1,label2|level2
+  if (snowDays.value.length > 0) {
+    const snowStr = snowDays.value.slice(0, 3).map((d) => `${d.label}|${d.snowLevel}`).join(',')
+    params.push(`snowDays=${encodeURIComponent(snowStr)}`)
+  }
+  uni.navigateTo({ url: `/pages/share/share?${params.join('&')}` })
 }
 
 async function loadDetail() {
