@@ -9,14 +9,6 @@
     "appid": "wx0000000000000000",
     "lazyCodeLoading": "requiredComponents",
     "componentFramework": "glass-easel",
-    "rendererOptions": {
-      "skyline": {
-        "defaultDisplayBlock": true,
-        "disableABTest": true,
-        "sdkVersionBegin": "3.0.0",
-        "sdkVersionEnd": "15.255.255"
-      }
-    },
     "setting": {
       "urlCheck": false,
       "es6": true,
