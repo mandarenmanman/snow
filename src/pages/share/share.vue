@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, getCurrentInstance } from 'vue'
+import { ref, nextTick } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getNavBarInfo } from '@/utils/navbar'
 import WeatherIcon from '@/components/WeatherIcon.vue'
@@ -154,8 +154,7 @@ async function handleShare() {
 
     setTimeout(() => {
       // #ifdef MP-WEIXIN
-      const instance = getCurrentInstance()
-      const query = wx.createSelectorQuery().in(instance?.proxy)
+      const query = uni.createSelectorQuery()
       query.select('#shareCard').node().exec((res: any) => {
         if (res && res[0] && res[0].node) {
           const node = res[0].node
