@@ -13,7 +13,11 @@
     <scroll-view scroll-y class="scroll-content">
       <view class="page-body">
         <!-- 海报 -->
-        <snapshot id="shareCard" class="card">
+        <snapshot id="shareCard" class="card-wrapper">
+          <view class="card">
+          <!-- 渐变背景层：用多层 view 模拟，确保 takeSnapshot 能截到 -->
+          <view class="card-bg-gradient card-bg-gradient-top"></view>
+          <view class="card-bg-gradient card-bg-gradient-bottom"></view>
           <!-- 背景装饰圆 -->
           <view class="card-bg-circle card-bg-circle-1"></view>
           <view class="card-bg-circle card-bg-circle-2"></view>
@@ -64,6 +68,7 @@
             <view class="brand-line"></view>
             <text class="brand-name">西门问雪</text>
             <text class="brand-slogan">发现身边的每一场雪</text>
+          </view>
           </view>
         </snapshot>
 
@@ -212,6 +217,7 @@ onLoad((options) => {
 </script>
 
 <style>
+/* ---- 字体图标 ---- */
 @font-face {
   font-family: 'FontAwesome';
   src: url('https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/font-awesome/6.5.1/webfonts/fa-solid-900.ttf') format('truetype');
@@ -231,7 +237,8 @@ onLoad((options) => {
 /* ---- 页面 ---- */
 .share-page {
   min-height: 100vh;
-  background: linear-gradient(160deg, #e8edf5 0%, #dce3ed 50%, #d0dae8 100%);
+  background-color: #dce3ed;
+  background-image: linear-gradient(160deg, #e8edf5 0%, #dce3ed 50%, #d0dae8 100%);
   display: flex;
   flex-direction: column;
 }
@@ -239,10 +246,9 @@ onLoad((options) => {
 /* ---- 顶部栏 ---- */
 .share-topbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between;
   padding: 8px 16px;
-  background: rgba(255,255,255,0.72);
-  backdrop-filter: blur(16px);
+  background-color: rgba(255,255,255,0.85);
 }
 .share-topbar-btn {
   width: 40px; height: 40px;
@@ -260,21 +266,46 @@ onLoad((options) => {
 }
 
 /* ---- 卡片 ---- */
+.card-wrapper {
+  background-color: #dce3ed;
+  padding: 12px;
+}
 .card {
   width: 295px;
   border-radius: 24px;
-  background: linear-gradient(145deg, #3b6cb5 0%, #5a9bd6 45%, #89c4f4 100%);
+  background-color: #4a8fd6;
   padding: 32px 24px 24px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(59,108,181,0.25);
 }
 
+/* 渐变背景层：用纯色 view 叠加模拟渐变，takeSnapshot 可截到 */
+.card-bg-gradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.card-bg-gradient-top {
+  top: 0;
+  height: 50%;
+  background-color: #3b6cb5;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+}
+.card-bg-gradient-bottom {
+  bottom: 0;
+  height: 50%;
+  background-color: #6aaee8;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+
 /* 装饰圆 */
 .card-bg-circle {
   position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  background-color: rgba(255,255,255,0.06);
 }
 .card-bg-circle-1 {
   width: 200px; height: 200px;
@@ -291,28 +322,28 @@ onLoad((options) => {
   position: relative; z-index: 1;
 }
 .card-city-row {
-  display: flex; align-items: center;
+  display: flex; flex-direction: row; align-items: center;
 }
 .card-city {
   font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 1px;
 }
 .snow-tag {
-  display: flex; align-items: center;
+  display: flex; flex-direction: row; align-items: center;
   margin-left: 8px;
-  background: rgba(255,255,255,0.2);
+  background-color: rgba(255,255,255,0.2);
   border-radius: 20px;
   padding: 2px 10px 2px 6px;
 }
 .snow-tag-icon { font-size: 10px; color: #fff; margin-right: 3px; }
-.snow-tag-text { font-size: 11px; color: #fff; font-weight: 500; }
+.snow-tag-text { font-size: 11px; color: #fff; font-weight: 500; margin-left: 3px; }
 .card-weather-text {
   font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px;
 }
 
 /* ---- 温度 ---- */
 .card-hero {
-  display: flex; align-items: center; justify-content: center;
-  margin: 24px 0 20px;
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
+  margin-top: 24px; margin-bottom: 20px;
   position: relative; z-index: 1;
 }
 .card-temp {
@@ -322,8 +353,8 @@ onLoad((options) => {
 
 /* ---- 指标 ---- */
 .card-stats {
-  display: flex; align-items: center; justify-content: space-between;
-  background: rgba(255,255,255,0.12);
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+  background-color: rgba(255,255,255,0.12);
   border-radius: 16px;
   padding: 14px 12px;
   position: relative; z-index: 1;
@@ -336,21 +367,23 @@ onLoad((options) => {
 .stat-label { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 3px; }
 .stat-divider {
   width: 1px; height: 24px;
-  background: rgba(255,255,255,0.15);
+  background-color: rgba(255,255,255,0.15);
 }
 
 /* ---- 引用 ---- */
 .card-quote {
   margin-top: 16px;
   padding: 10px 14px;
-  background: rgba(255,255,255,0.1);
+  background-color: rgba(255,255,255,0.1);
   border-radius: 12px;
-  border-left: 3px solid rgba(255,255,255,0.4);
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-left-color: rgba(255,255,255,0.4);
   position: relative; z-index: 1;
 }
 .card-quote-text {
   font-size: 13px; color: rgba(255,255,255,0.85);
-  font-style: italic; line-height: 1.6;
+  line-height: 1.6;
 }
 
 /* ---- 品牌 ---- */
@@ -361,7 +394,7 @@ onLoad((options) => {
 }
 .brand-line {
   width: 32px; height: 2px;
-  background: rgba(255,255,255,0.2);
+  background-color: rgba(255,255,255,0.2);
   border-radius: 1px;
   margin-bottom: 10px;
 }
@@ -378,8 +411,8 @@ onLoad((options) => {
   width: 100%; margin-top: 24px;
 }
 .input-wrap {
-  display: flex; align-items: center;
-  background: #fff;
+  display: flex; flex-direction: row; align-items: center;
+  background-color: #fff;
   border-radius: 14px;
   padding: 0 14px;
   height: 48px;
@@ -393,14 +426,19 @@ onLoad((options) => {
 }
 
 .save-btn {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
   width: 100%; height: 48px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #4a8fd6 0%, #5c6bc0 100%);
+  background-color: #4a8fd6;
+  background-image: linear-gradient(135deg, #4a8fd6 0%, #5c6bc0 100%);
   margin-top: 16px;
   box-shadow: 0 4px 16px rgba(74,143,214,0.3);
 }
 .save-btn.disabled { opacity: 0.55; }
 .save-btn-icon { font-size: 15px; color: #fff; margin-right: 6px; }
-.save-btn-text { font-size: 15px; font-weight: 500; color: #fff; }
+.save-btn-text { font-size: 15px; font-weight: 500; color: #fff; margin-left: 6px; }
+
+/* hover */
+.hover-opacity-60 { opacity: 0.6; }
+.hover-opacity-80 { opacity: 0.8; }
 </style>
