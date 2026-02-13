@@ -4,7 +4,10 @@
 
     <!-- 标题 -->
     <view class="px-4 pt-4 pb-2">
-      <text class="text-headline-md font-bold text-on-surface block">西门问雪</text>
+      <view class="flex items-center justify-between">
+        <text class="text-headline-md font-bold text-on-surface">西门问雪</text>
+        <text class="text-body-md text-on-surface-variant">{{ currentTime }}</text>
+      </view>
       <text class="text-body-md text-on-surface-variant block mt-1">当天气预报只说'雨夹雪'，</text> 
         <text class="text-body-md text-on-surface-variant block mt-1">我们告诉你'现在出发，还能赶上长安的瑞雪'。</text>
     </view>
@@ -172,7 +175,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
 import type { SnowRegion, SnowLevel } from '@/models/types'
 import { fetchSnowRegions, fetchSnowRegionsRemote, filterSnowingCities } from '@/services/snow-service'
@@ -193,6 +196,25 @@ const errorMessage = ref('获取降雪数据失败，请检查网络连接')
 const cityImages = ref<Record<string, string>>({})
 const userLat = ref(0)
 const userLon = ref(0)
+
+/** 当前日期+时间 MM/DD HH:MM */
+const currentTime = ref('')
+let timeTimer: ReturnType<typeof setInterval> | null = null
+
+function updateCurrentTime() {
+  const now = new Date()
+  const M = String(now.getMonth() + 1).padStart(2, '0')
+  const D = String(now.getDate()).padStart(2, '0')
+  const h = String(now.getHours()).padStart(2, '0')
+  const m = String(now.getMinutes()).padStart(2, '0')
+  currentTime.value = `${M}/${D} ${h}:${m}`
+}
+updateCurrentTime()
+timeTimer = setInterval(updateCurrentTime, 60000)
+
+onUnmounted(() => {
+  if (timeTimer) { clearInterval(timeTimer); timeTimer = null }
+})
 
 /** 用户已订阅的城市 ID 集合 */
 const subscribedCityIds = ref<Set<string>>(new Set())
@@ -313,28 +335,18 @@ const hotCities = computed(() => {
 
 const snowingCities = computed(() => filterSnowingCities(allRegions.value))
 
-function formatTime(isoString: string): string {
-  try {
-    const date = new Date(isoString)
-    if (isNaN(date.getTime())) return ''
-    const h = String(date.getHours()).padStart(2, '0')
-    const m = String(date.getMinutes()).padStart(2, '0')
-    return `${h}:${m}`
-  } catch { return '' }
-}
-
-/** 地图上需要标记的下雪城市（合并 allRegions 和 hotCities 中有雪的） */
+/** 地图上需要标记的城市：当前有雪 + 未来有雪（snowForecast） */
 const mapSnowCities = computed(() => {
   const map = new Map<string, SnowRegion>()
-  // 先加 allRegions 中有雪的
+  // allRegions 中当前有雪或未来有雪的
   for (const r of allRegions.value) {
-    if (r.snowLevel !== '无' && r.latitude && r.longitude) {
+    if ((r.snowLevel !== '无' || r.snowForecast) && r.latitude && r.longitude) {
       map.set(r.cityId, r)
     }
   }
-  // 再加 hotCities 中有雪但不在 allRegions 里的
+  // hotCities 中当前有雪或未来有雪的
   for (const c of hotCities.value) {
-    if (c.snowLevel !== '无' && c.latitude && c.longitude && !map.has(c.cityId)) {
+    if ((c.snowLevel !== '无' || c.snowForecast) && c.latitude && c.longitude && !map.has(c.cityId)) {
       map.set(c.cityId, c)
     }
   }
@@ -342,12 +354,12 @@ const mapSnowCities = computed(() => {
 })
 
 /**
- * 地图中心点：用边界框中心计算
- * 多个点时取所有点的 min/max 经纬度的中点，比简单平均更合理
+ * 地图中心点：1条数据直接居中，多条取边界框中心
  */
 const centerLat = computed((): number => {
   const cities = mapSnowCities.value
   if (cities.length === 0) return 35.86
+  if (cities.length === 1) return cities[0].latitude
   const lats = cities.map((r) => r.latitude)
   return (Math.min(...lats) + Math.max(...lats)) / 2
 })
@@ -355,6 +367,7 @@ const centerLat = computed((): number => {
 const centerLon = computed((): number => {
   const cities = mapSnowCities.value
   if (cities.length === 0) return 104.20
+  if (cities.length === 1) return cities[0].longitude
   const lons = cities.map((r) => r.longitude)
   return (Math.min(...lons) + Math.max(...lons)) / 2
 })
@@ -381,36 +394,49 @@ const mapScale = computed((): number => {
   return 9
 })
 
-/** 雪花等级对应的 callout 样式 */
-function getSnowMarkerLabel(level: string): string {
-  switch (level) {
-    case '小雪': return '❄'
-    case '中雪': return '❄❄'
-    case '大雪': return '❄❄❄'
-    case '暴雪': return '❄❄❄❄'
-    default: return '❄'
+/** 雪花等级对应的 callout 标签 */
+function getSnowMarkerLabel(region: SnowRegion): string {
+  if (region.snowLevel !== '无') {
+    // 当前正在下雪
+    switch (region.snowLevel) {
+      case '小雪': return '❄ 小雪'
+      case '中雪': return '❄❄ 中雪'
+      case '大雪': return '❄❄❄ 大雪'
+      case '暴雪': return '❄❄❄❄ 暴雪'
+      default: return '❄'
+    }
   }
+  // 未来有雪
+  if (region.snowForecast) {
+    const f = region.snowForecast
+    const dayLabel = f.daysFromNow === 0 ? '今天' : f.daysFromNow === 1 ? '明天' : f.daysFromNow === 2 ? '后天' : `${f.daysFromNow}天后`
+    return `🔮 ${dayLabel}${f.snowLevel}`
+  }
+  return '❄'
 }
 
 const mapMarkers = computed(() => {
-  return mapSnowCities.value.map((region: SnowRegion, index: number) => ({
-    id: index,
-    latitude: region.latitude,
-    longitude: region.longitude,
-    title: region.cityName,
-    iconPath: '/static/tabs/home.png',
-    width: 1,
-    height: 1,
-    callout: {
-      content: `${getSnowMarkerLabel(region.snowLevel)} ${region.cityName}`,
-      display: 'ALWAYS',
-      fontSize: 13,
-      borderRadius: 20,
-      padding: 8,
-      bgColor: '#1565C0',
-      color: '#FFFFFF',
-    },
-  }))
+  return mapSnowCities.value.map((region: SnowRegion, index: number) => {
+    const isCurrentSnow = region.snowLevel !== '无'
+    return {
+      id: index,
+      latitude: region.latitude,
+      longitude: region.longitude,
+      title: region.cityName,
+      iconPath: '/static/tabs/home-active.png',
+      width: 28,
+      height: 28,
+      callout: {
+        content: `${getSnowMarkerLabel(region)} ${region.cityName}`,
+        display: 'ALWAYS',
+        fontSize: 13,
+        borderRadius: 20,
+        padding: 8,
+        bgColor: isCurrentSnow ? '#1565C0' : '#5C6BC0',
+        color: '#FFFFFF',
+      },
+    }
+  })
 })
 
 function getSnowBadgeBg(level: string): string {
