@@ -280,6 +280,14 @@ async function toggleFavorite() {
 }
 
 onLoad((options) => {
+  // 扫小程序码进入时，参数在 scene 里，格式: cityId=xxx
+  if (options?.scene && !options.cityId) {
+    const scene = decodeURIComponent(options.scene)
+    const params = new URLSearchParams(scene)
+    if (params.get('cityId')) {
+      options.cityId = params.get('cityId')!
+    }
+  }
   if (options?.cityId) {
     cityId.value = options.cityId
     longitude.value = Number(options.longitude) || 0

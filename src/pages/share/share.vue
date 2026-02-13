@@ -66,8 +66,13 @@
           <!-- 底部品牌 -->
           <view class="card-brand">
             <view class="brand-line"></view>
-            <text class="brand-name">西门问雪</text>
-            <text class="brand-slogan">发现身边的每一场雪</text>
+            <view class="brand-content">
+              <view class="brand-left">
+                <text class="brand-name">西门问雪</text>
+                <text class="brand-slogan">发现身边的每一场雪</text>
+              </view>
+              <image class="brand-qrcode" :src="qrcodeUrl" mode="aspectFit" />
+            </view>
           </view>
           </view>
         </snapshot>
@@ -79,10 +84,10 @@
               v-model="shareText"
               class="share-input"
               placeholder="写一句分享心情..."
-              maxlength="50"
+              maxlength="20"
               :placeholder-style="'color:#bbb;font-size:14px'"
             />
-            <text class="input-count">{{ shareText.length }}/50</text>
+            <text class="input-count">{{ shareText.length }}/20</text>
           </view>
           <view
             class="save-btn"
@@ -116,6 +121,7 @@ const windSpeed = ref('')
 const windDirection = ref('')
 const shareText = ref('')
 const isGenerating = ref(false)
+const qrcodeUrl = ref('/static/qrcode.jpg')
 
 const { statusBarHeight, totalHeight } = getNavBarInfo()
 const navPadding = `${statusBarHeight}px`
@@ -213,7 +219,28 @@ onLoad((options) => {
     windSpeed.value = options.windSpeed || ''
     windDirection.value = decodeURIComponent(options.windDirection || '')
   }
+  loadQRCode()
 })
+
+async function loadQRCode() {
+  try {
+    // #ifdef MP-WEIXIN
+    const res = await wx.cloud.callFunction({
+      name: 'getQRCode',
+      data: {
+        scene: `cityId=${cityId.value}`,
+        page: 'pages/detail/detail',
+      },
+    })
+    const result = res.result as { code?: number; data?: { url?: string } }
+    if (result.code === 0 && result.data?.url) {
+      qrcodeUrl.value = result.data.url
+    }
+    // #endif
+  } catch {
+    // 获取失败，保持本地默认图片 /static/qrcode.jpg
+  }
+}
 </script>
 
 <style>
@@ -393,10 +420,16 @@ onLoad((options) => {
   position: relative; z-index: 1;
 }
 .brand-line {
-  width: 32px; height: 2px;
-  background-color: rgba(255,255,255,0.2);
-  border-radius: 1px;
-  margin-bottom: 10px;
+  width: 100%; height: 1px;
+  background-color: rgba(255,255,255,0.15);
+  margin-bottom: 12px;
+}
+.brand-content {
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+  width: 100%;
+}
+.brand-left {
+  display: flex; flex-direction: column;
 }
 .brand-name {
   font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5);
@@ -404,6 +437,10 @@ onLoad((options) => {
 }
 .brand-slogan {
   font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 3px;
+}
+.brand-qrcode {
+  width: 48px; height: 48px;
+  border-radius: 6px;
 }
 
 /* ---- 底部操作区 ---- */
