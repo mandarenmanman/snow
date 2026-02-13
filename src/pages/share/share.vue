@@ -139,6 +139,7 @@ const snowDays = ref<Array<{ label: string; level: string }>>([])
 const { statusBarHeight, totalHeight } = getNavBarInfo()
 const navPadding = `${statusBarHeight}px`
 const navTotalHeight = totalHeight
+const instance = getCurrentInstance()
 
 function goBack() {
   uni.navigateBack({ delta: 1 })
@@ -154,7 +155,6 @@ async function handleShare() {
 
     setTimeout(() => {
       // #ifdef MP-WEIXIN
-      const instance = getCurrentInstance()
       const query = wx.createSelectorQuery().in(instance?.proxy)
       query.select('#shareCard').node().exec((res: any) => {
         if (res && res[0] && res[0].node) {
