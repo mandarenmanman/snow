@@ -331,14 +331,19 @@ const hotCities = computed(() => {
 
   const list = Array.from(merged.values())
 
-  // 排序：收藏在前，有雪优先，再按距离
+  // 排序：当前有雪 > 未来有雪 > 无雪，同级按距离
   return list.sort((a, b) => {
-    const aFav = userFavorites.value.some((f) => f.cityId === a.cityId) ? 1 : 0
-    const bFav = userFavorites.value.some((f) => f.cityId === b.cityId) ? 1 : 0
-    if (aFav !== bFav) return bFav - aFav
-    const aSnow = (SNOW_ORDER[a.snowLevel] || 0) > 0 ? 1 : 0
-    const bSnow = (SNOW_ORDER[b.snowLevel] || 0) > 0 ? 1 : 0
-    if (aSnow !== bSnow) return bSnow - aSnow
+    // 优先级：2=当前有雪，1=未来有雪（snowForecast），0=无雪
+    const aPri = (SNOW_ORDER[a.snowLevel] || 0) > 0 ? 2 : (a.snowForecast ? 1 : 0)
+    const bPri = (SNOW_ORDER[b.snowLevel] || 0) > 0 ? 2 : (b.snowForecast ? 1 : 0)
+    if (aPri !== bPri) return bPri - aPri
+    // 未来有雪的按天数从近到远
+    if (aPri === 1 && bPri === 1) {
+      const aDays = a.snowForecast!.daysFromNow
+      const bDays = b.snowForecast!.daysFromNow
+      if (aDays !== bDays) return aDays - bDays
+    }
+    // 同级按距离
     const aDist = calcDistance(userLat.value, userLon.value, a.latitude, a.longitude)
     const bDist = calcDistance(userLat.value, userLon.value, b.latitude, b.longitude)
     return aDist - bDist
