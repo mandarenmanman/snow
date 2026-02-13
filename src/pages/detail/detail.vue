@@ -1,131 +1,102 @@
 <template>
-  <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
-    <!-- 返回 + 订阅 -->
-    <view class="px-4 pt-4 pb-2 flex items-center justify-between">
-      <view class="flex items-center flex-1">
-        <view
-          class="flex items-center justify-center rounded-full mr-3"
-          hover-class="hover-opacity-60"
-          style="width: 40px; height: 40px;"
-          @click="goBack"
-        >
-          <Icon name="arrow-left" size="20px" class="text-on-surface" />
-        </view>
-        <view>
-          <text class="text-headline-md font-bold text-on-surface block">
-            {{ cityDetail ? cityDetail.cityName : (cityName || '城市详情') }}
-          </text>
-          <text v-if="cityDetail" class="text-body-sm text-on-surface-variant block mt-1">
-            {{ province ? province + ' · ' : '' }}更新于 {{ formattedUpdatedAt }}
-          </text>
-        </view>
+  <view class="detail-page" :style="{ paddingTop: navPadding }">
+    <!-- 顶部栏：毛玻璃效果 -->
+    <view class="detail-topbar">
+      <view class="detail-topbar-btn" hover-class="hover-opacity-60" @click="goBack">
+        <Icon name="arrow-left" size="18px" color="#fff" />
       </view>
-      <view
-        v-if="cityDetail"
-        class="flex items-center justify-center rounded-full transition-all duration-200"
-        hover-class="hover-opacity-60"
-        style="width: 48px; height: 48px;"
-        @click="toggleFavorite"
-      >
-        <Icon
-          name="star"
-          :type="isFavorited ? 'solid' : 'regular'"
-          size="24px"
-          :class="isFavorited ? 'text-primary' : 'text-on-surface-variant'"
-        />
+      <view v-if="cityDetail" class="detail-topbar-btn" hover-class="hover-opacity-60" @click="toggleFavorite">
+        <Icon name="bell" :type="isFavorited ? 'solid' : 'regular'" size="18px" :color="isFavorited ? '#fff' : 'rgba(255,255,255,0.5)'" />
       </view>
     </view>
 
-    <!-- 加载 -->
-    <view v-if="loading" class="flex flex-col items-center justify-center py-12">
-      <view class="mb-3">
-        <Icon name="snowflake" size="32px" class="text-primary animate-spin" />
-      </view>
-      <text class="text-body-md text-on-surface-variant">正在加载城市详情...</text>
+    <!-- 加载态 -->
+    <view v-if="loading" class="flex flex-col items-center justify-center py-16">
+      <Icon name="snowflake" size="32px" class="text-primary animate-spin" style="margin-bottom: 12px;" />
+      <text class="text-body-md" style="color: rgba(255,255,255,0.8);">加载中...</text>
     </view>
 
     <ErrorRetry v-else-if="hasError" :message="errorMessage" @retry="loadDetail" />
 
-    <!-- 详情 -->
-    <view v-else-if="cityDetail" class="px-4 pb-6">
-      <!-- 当前天气卡片 -->
-      <view class="rounded-3xl bg-surface-container shadow-elevation-2 p-5 mb-4">
-        <view class="flex items-end justify-between mb-4">
-          <view class="flex items-end">
-            <text class="text-display-md font-bold text-on-surface" style="line-height: 1;">
-              {{ cityDetail.current.temperature }}
-            </text>
-            <text class="text-headline-sm text-on-surface-variant ml-1 mb-1">°C</text>
-          </view>
-          <view class="flex items-center rounded-full px-4 py-2" :class="snowLevelBgClass">
-            <text class="text-label-lg" :class="snowLevelTextClass">
-              {{ snowLevelToFlakes(cityDetail.current.snowLevel) }}
-            </text>
-          </view>
-        </view>
+    <!-- 主内容 -->
+    <view v-else-if="cityDetail">
 
-        <view class="flex flex-wrap">
-          <view class="w-half flex items-center py-2">
-            <view class="rounded-full bg-primary-container flex items-center justify-center mr-3" style="width: 36px; height: 36px;">
-              <Icon name="droplet" size="16px" class="text-primary-on-container" />
-            </view>
-            <view>
-              <text class="text-body-sm text-on-surface-variant block">湿度</text>
-              <text class="text-title-sm text-on-surface block">{{ cityDetail.current.humidity }}%</text>
-            </view>
-          </view>
-          <view class="w-half flex items-center py-2">
-            <view class="rounded-full bg-primary-container flex items-center justify-center mr-3" style="width: 36px; height: 36px;">
-              <Icon name="wind" size="16px" class="text-primary-on-container" />
-            </view>
-            <view>
-              <text class="text-body-sm text-on-surface-variant block">风速</text>
-              <text class="text-title-sm text-on-surface block">{{ cityDetail.current.windSpeed }}km/h</text>
-            </view>
-          </view>
-          <view class="w-half flex items-center py-2">
-            <view class="rounded-full bg-primary-container flex items-center justify-center mr-3" style="width: 36px; height: 36px;">
-              <Icon name="location-arrow" size="16px" class="text-primary-on-container" />
-            </view>
-            <view>
-              <text class="text-body-sm text-on-surface-variant block">风向</text>
-              <text class="text-title-sm text-on-surface block">{{ cityDetail.current.windDirection }}</text>
-            </view>
-          </view>
-          <view class="w-half flex items-center py-2">
-            <view class="rounded-full bg-primary-container flex items-center justify-center mr-3" style="width: 36px; height: 36px;">
-              <Icon name="eye" size="16px" class="text-primary-on-container" />
-            </view>
-            <view>
-              <text class="text-body-sm text-on-surface-variant block">能见度</text>
-              <text class="text-title-sm text-on-surface block">{{ cityDetail.current.visibility }}km</text>
-            </view>
-          </view>
+      <!-- Hero 区域：渐变背景 -->
+      <view class="detail-hero">
+        <text class="detail-city-name">{{ cityDetail.cityName || cityName || '未知城市' }}</text>
+        <text v-if="province" class="detail-province">{{ province }}</text>
+        <text class="detail-weather-text">{{ cityDetail.current.weatherText || cityDetail.current.snowLevel }}</text>
+        <WeatherIcon v-if="cityDetail.current.iconCode" :code="cityDetail.current.iconCode" fill size="48px" color="rgba(255,255,255,0.9)" />
+        <text class="detail-temp-big">{{ cityDetail.current.temperature }}°</text>
+        <!-- 当前降雪状态标签 -->
+        <view v-if="cityDetail.current.snowLevel !== '无'" class="detail-current-snow-badge">
+          <Icon name="snowflake" size="12px" color="#fff" style="margin-right: 4px;" />
+          <text class="detail-current-snow-text">当前 {{ cityDetail.current.snowLevel }}</text>
         </view>
       </view>
 
-      <!-- 预报 -->
-      <view class="mb-4">
-        <text class="text-title-md text-on-surface block mb-3">未来 15 天降雪预报</text>
-        <view v-if="cityDetail.forecast.length > 0" class="rounded-3xl bg-surface-container shadow-elevation-1 overflow-hidden">
-          <ForecastItem v-for="item in cityDetail.forecast" :key="item.date" :forecast="item" />
+      <!-- 指标卡片行 -->
+      <view class="detail-metrics">
+        <view class="detail-metric-card">
+          <Icon name="droplet" size="16px" class="text-primary" />
+          <text class="detail-metric-value">{{ cityDetail.current.humidity }}%</text>
+          <text class="detail-metric-label">湿度</text>
         </view>
-        <EmptyState v-else message="预报数据更新中，请稍后再试" icon="cloud" />
+        <view class="detail-metric-card">
+          <Icon name="wind" size="16px" class="text-primary" />
+          <text class="detail-metric-value">{{ cityDetail.current.windSpeed }}km/h</text>
+          <text class="detail-metric-label">风速</text>
+        </view>
+        <view class="detail-metric-card">
+          <Icon name="location-arrow" size="16px" class="text-primary" />
+          <text class="detail-metric-value">{{ cityDetail.current.windDirection }}</text>
+          <text class="detail-metric-label">风向</text>
+        </view>
+        <view class="detail-metric-card">
+          <Icon name="eye" size="16px" class="text-primary" />
+          <text class="detail-metric-value">{{ cityDetail.current.visibility }}km</text>
+          <text class="detail-metric-label">能见度</text>
+        </view>
+      </view>
+
+      <!-- 降雪日提醒 -->
+      <view v-if="snowDays.length > 0" class="detail-section">
+        <view class="detail-snow-card">
+          <view class="flex items-center" style="margin-bottom: 6px;">
+            <Icon name="snowflake" size="14px" class="text-primary" style="margin-right: 6px;" />
+            <text class="detail-snow-card-title">未来降雪提醒</text>
+          </view>
+          <view v-for="day in snowDays" :key="day.date" class="detail-snow-card-row">
+            <text class="detail-snow-card-label">{{ day.label }}</text>
+            <text class="detail-snow-card-level">{{ day.snowLevel }}</text>
+          </view>
+        </view>
       </view>
 
       <!-- 热门景区 -->
-      <view v-if="scenics.length > 0" class="mb-4">
-        <text class="text-title-md text-on-surface block mb-3">热门景区</text>
-        <view class="flex flex-wrap">
-          <view
-            v-for="spot in scenics"
-            :key="spot"
-            class="rounded-full bg-primary-container px-4 py-2 mr-2 mb-2 flex items-center"
-          >
-            <Icon name="location-dot" size="14px" class="text-primary-on-container mr-2" />
-            <text class="text-label-lg text-primary-on-container">{{ spot }}</text>
+      <view v-if="scenics.length > 0" class="detail-section">        <text class="detail-section-title">热门景区</text>
+        <scroll-view scroll-x class="detail-scenics-scroll">
+          <view class="detail-scenics-row">
+            <view v-for="spot in scenics" :key="spot" class="detail-scenic-tag">
+              <Icon name="location-dot" size="11px" class="text-primary" style="margin-right: 6px;" />
+              <text class="detail-scenic-text">{{ spot }}</text>
+            </view>
           </view>
+        </scroll-view>
+      </view>
+
+      <!-- 15天预报 -->
+      <view class="detail-section">
+        <text class="detail-section-title">15 天天气预报</text>
+        <view v-if="cityDetail.forecast && cityDetail.forecast.length > 0" class="detail-forecast-card">
+          <ForecastItem v-for="item in cityDetail.forecast" :key="item.date" :forecast="item" />
         </view>
+        <EmptyState v-else message="预报数据更新中" icon="cloud" />
+      </view>
+
+      <!-- 更新时间 -->
+      <view class="detail-footer">
+        <text class="detail-footer-text">更新于 {{ formattedUpdatedAt }}</text>
       </view>
     </view>
   </view>
@@ -137,8 +108,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import type { CityDetail } from '@/models/types'
 import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, getProvince } from '@/models/scenics'
-import { snowLevelToFlakes } from '@/utils/snow'
 import Icon from '@/components/Icon.vue'
+import WeatherIcon from '@/components/WeatherIcon.vue'
 import ForecastItem from '@/components/ForecastItem.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -159,6 +130,31 @@ const navPadding = `${totalHeight}px`
 const province = computed(() => getProvince(cityId.value))
 const scenics = computed(() => getScenics(cityId.value))
 
+/** 从15天预报中提取所有有雪的日期 */
+const snowDays = computed(() => {
+  if (!cityDetail.value?.forecast?.length) return []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+  return cityDetail.value.forecast
+    .filter((f) => f.snowLevel && f.snowLevel !== '无')
+    .map((f) => {
+      const d = new Date(f.date)
+      const diff = Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      let label: string
+      if (diff === 0) label = '今天'
+      else if (diff === 1) label = '明天'
+      else if (diff === 2) label = '后天'
+      else {
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        label = `${m}-${day} ${weekdays[d.getDay()]}`
+      }
+      return { date: f.date, label, snowLevel: f.snowLevel }
+    })
+})
+
 const formattedUpdatedAt = computed(() => {
   if (!cityDetail.value) return ''
   try {
@@ -170,39 +166,6 @@ const formattedUpdatedAt = computed(() => {
     const min = String(date.getMinutes()).padStart(2, '0')
     return `${m}-${d} ${h}:${min}`
   } catch { return cityDetail.value.updatedAt }
-})
-
-const snowLevelBgClass = computed(() => {
-  if (!cityDetail.value) return 'bg-surface-container-high'
-  switch (cityDetail.value.current.snowLevel) {
-    case '暴雪': return 'bg-snow-blizzard-15'
-    case '大雪': return 'bg-snow-heavy-15'
-    case '中雪': return 'bg-snow-moderate-15'
-    case '小雪': return 'bg-primary-container'
-    default: return 'bg-surface-container-high'
-  }
-})
-
-const snowLevelIconClass = computed(() => {
-  if (!cityDetail.value) return 'text-on-surface-variant'
-  switch (cityDetail.value.current.snowLevel) {
-    case '暴雪': return 'text-snow-blizzard'
-    case '大雪': return 'text-snow-heavy'
-    case '中雪': return 'text-snow-moderate'
-    case '小雪': return 'text-primary'
-    default: return 'text-snow-none'
-  }
-})
-
-const snowLevelTextClass = computed(() => {
-  if (!cityDetail.value) return 'text-on-surface-variant'
-  switch (cityDetail.value.current.snowLevel) {
-    case '暴雪': return 'text-snow-blizzard'
-    case '大雪': return 'text-snow-heavy'
-    case '中雪': return 'text-snow-moderate'
-    case '小雪': return 'text-primary'
-    default: return 'text-on-surface-variant'
-  }
 })
 
 function goBack() {
@@ -285,4 +248,193 @@ onLoad((options) => {
   to { transform: rotate(360deg); }
 }
 .animate-spin { animation: spin 2s linear infinite; }
+
+/* 整页渐变背景 */
+.detail-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #4A90D9 0%, #6BB3F0 35%, #E8F0FA 55%, #F7F9FC 70%);
+}
+
+/* 顶部栏 */
+.detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+.detail-topbar-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+/* Hero 区域 */
+.detail-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 24px 28px;
+}
+.detail-city-name {
+  font-size: 28px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 1px;
+}
+.detail-province {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+.detail-weather-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 6px;
+}
+.detail-temp-big {
+  font-size: 80px;
+  font-weight: 100;
+  color: #fff;
+  line-height: 1;
+  margin-top: 4px;
+  letter-spacing: -3px;
+}
+
+/* 当前降雪状态标签 */
+.detail-current-snow-badge {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  padding: 4px 14px;
+}
+.detail-current-snow-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* 降雪提醒卡片 */
+.detail-snow-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.detail-snow-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1B1F26;
+}
+.detail-snow-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(184, 194, 204, 0.12);
+}
+.detail-snow-card-row:last-child {
+  border-bottom: none;
+}
+.detail-snow-card-label {
+  font-size: 13px;
+  color: #414B57;
+}
+.detail-snow-card-level {
+  font-size: 13px;
+  font-weight: 500;
+  color: #5BA8F5;
+}
+
+/* 指标卡片 */
+.detail-metrics {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  margin-top: -8px;
+  margin-bottom: 20px;
+}
+.detail-metric-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 12px 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.detail-metric-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1B1F26;
+  margin-top: 6px;
+}
+.detail-metric-label {
+  font-size: 11px;
+  color: #6E7A87;
+  margin-top: 2px;
+}
+
+/* 通用 section */
+.detail-section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+}
+.detail-section-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1B1F26;
+  margin-bottom: 12px;
+}
+
+/* 景区横滑 */
+.detail-scenics-scroll {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.detail-scenics-row {
+  display: flex;
+  gap: 8px;
+}
+.detail-scenic-tag {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: #DCEEFB;
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.detail-scenic-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #0B3D6E;
+}
+
+/* 预报卡片 */
+.detail-forecast-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 底部更新时间 */
+.detail-footer {
+  text-align: center;
+  padding: 8px 0 32px;
+}
+.detail-footer-text {
+  font-size: 11px;
+  color: #9EA8B4;
+}
 </style>

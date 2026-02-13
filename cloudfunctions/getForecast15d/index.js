@@ -82,6 +82,7 @@ exports.main = async (event, context) => {
       snowLevel,
       visibility: Number(weatherNow.vis),
       weatherText: weatherNow.text || '',
+      iconCode: weatherNow.icon || '',
     }
 
     // 组装15天预报
@@ -102,6 +103,7 @@ exports.main = async (event, context) => {
         weatherTextNight: day.textNight || '',
         windDirDay: day.windDirDay || '',
         windScaleDay: day.windScaleDay || '',
+        iconDay: day.iconDay || '',
       }
     })
 

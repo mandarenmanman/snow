@@ -39,6 +39,7 @@ export interface SnowForecast {
   weatherTextNight?: string // 夜间天气描述
   windDirDay?: string       // 白天风向
   windScaleDay?: string     // 白天风力等级
+  iconDay?: string          // 白天天气图标代码
 }
 
 /**
@@ -83,6 +84,8 @@ export interface CityDetail {
     windDirection: string
     snowLevel: string
     visibility: number
+    weatherText?: string
+    iconCode?: string
   }
   forecast: SnowForecast[]
   updatedAt: string
