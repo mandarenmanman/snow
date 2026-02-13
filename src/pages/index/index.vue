@@ -371,7 +371,7 @@ const mapSnowCities = computed(() => {
       map.set(r.cityId, r)
     }
   }
-  // 再加 hotCities 中有雪但不在 allRegions 里的（如模拟数据）
+  // 再加 hotCities 中有雪但不在 allRegions 里的
   for (const c of hotCities.value) {
     if (c.snowLevel !== '无' && c.latitude && c.longitude && !map.has(c.cityId)) {
       map.set(c.cityId, c)
@@ -651,7 +651,7 @@ async function loadAllCityImages() {
   for (const info of hotCityInfos.value) {
     await loadCityImage(info.cityId, info.cityName)
   }
-  // 加载 hotCities 中不在 hotCityInfos 里的（如模拟数据）
+  // 加载 hotCities 中不在 hotCityInfos 里的
   for (const city of hotCities.value) {
     if (!hotCityInfos.value.some((info) => info.cityId === city.cityId)) {
       await loadCityImage(city.cityId, city.cityName)

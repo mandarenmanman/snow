@@ -68,7 +68,7 @@ const iconStyle = computed(() => {
 
 <style scoped>
 .icon-fas, .icon-far {
-  font-family: 'Font Awesome 6 Free';
+  font-family: 'FontAwesome' !important;
   font-style: normal;
   -webkit-font-smoothing: antialiased;
 }
@@ -76,6 +76,7 @@ const iconStyle = computed(() => {
   font-weight: 900;
 }
 .icon-far {
+  font-family: 'FontAwesomeRegular', 'FontAwesome' !important;
   font-weight: 400;
 }
 </style>
