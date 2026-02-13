@@ -15,9 +15,6 @@
         <!-- 海报 -->
         <snapshot id="shareCard" class="card-wrapper">
           <view class="card">
-            <!-- 渐变背景层：用多层 view 模拟，确保 takeSnapshot 能截到 -->
-            <view class="card-bg-gradient card-bg-gradient-top"></view>
-            <view class="card-bg-gradient card-bg-gradient-bottom"></view>
             <!-- 背景装饰圆 -->
             <view class="card-bg-circle card-bg-circle-1"></view>
             <view class="card-bg-circle card-bg-circle-2"></view>
@@ -343,8 +340,7 @@ async function loadQRCode() {
 
 /* ---- 卡片 ---- */
 .card-wrapper {
-  background-color: #dce3ed;
-  padding: 12px;
+  padding: 0;
 }
 
 .card {
@@ -354,37 +350,13 @@ async function loadQRCode() {
   padding: 32px 24px 24px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(59, 108, 181, 0.25);
-}
-
-/* 渐变背景层：用纯色 view 叠加模拟渐变，takeSnapshot 可截到 */
-.card-bg-gradient {
-  position: absolute;
-  left: 0;
-  right: 0;
-}
-
-.card-bg-gradient-top {
-  top: 0;
-  height: 50%;
-  background-color: #3b6cb5;
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-}
-
-.card-bg-gradient-bottom {
-  bottom: 0;
-  height: 50%;
-  background-color: #6aaee8;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
 }
 
 /* 装饰圆 */
 .card-bg-circle {
   position: absolute;
   border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: #58a0e2;
 }
 
 .card-bg-circle-1 {
@@ -427,7 +399,7 @@ async function loadQRCode() {
   flex-direction: row;
   align-items: center;
   margin-left: 8px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: #5da2e3;
   border-radius: 20px;
   padding: 2px 10px 2px 6px;
 }
@@ -478,7 +450,7 @@ async function loadQRCode() {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: #6aabeb;
   border-radius: 16px;
   padding: 14px 12px;
   position: relative;
@@ -507,14 +479,14 @@ async function loadQRCode() {
 .stat-divider {
   width: 1px;
   height: 24px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: #7ab6ee;
 }
 
 /* ---- 未来降雪 ---- */
 .card-snow-forecast {
   margin-top: 14px;
   padding: 10px 12px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #62a5e6;
   border-radius: 12px;
   position: relative;
   z-index: 1;
@@ -562,7 +534,7 @@ async function loadQRCode() {
 .card-quote {
   margin-top: 16px;
   padding: 10px 14px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #62a5e6;
   border-radius: 12px;
   border-left-width: 3px;
   border-left-style: solid;
@@ -590,7 +562,7 @@ async function loadQRCode() {
 .brand-line {
   width: 100%;
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: #7ab6ee;
   margin-bottom: 12px;
 }
 
