@@ -15,12 +15,6 @@
       }
     },
     {
-      "path": "pages/nearby/nearby",
-      "style": {
-        "navigationStyle": "custom"
-      }
-    },
-    {
       "path": "pages/detail/detail",
       "style": {
         "navigationStyle": "custom"
@@ -55,12 +49,6 @@
         "text": "搜索",
         "iconPath": "static/tabs/search.png",
         "selectedIconPath": "static/tabs/search-active.png"
-      },
-      {
-        "pagePath": "pages/nearby/nearby",
-        "text": "附近",
-        "iconPath": "static/tabs/nearby.png",
-        "selectedIconPath": "static/tabs/nearby-active.png"
       },
       {
         "pagePath": "pages/favorites/favorites",

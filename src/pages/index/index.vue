@@ -572,7 +572,7 @@ function onAlertBannerClick() {
   const city = hotCities.value.find((c) => c.cityId === snowAlertCity.value!.cityId)
     || allRegions.value.find((r) => r.cityId === snowAlertCity.value!.cityId)
   if (city) {
-    let url = `/pages/detail/detail?cityId=${city.cityId}`
+    let url = `/pages/detail/detail?cityId=${city.cityId}&cityName=${encodeURIComponent(city.cityName)}`
     if (city.latitude && city.longitude) {
       url += `&latitude=${city.latitude}&longitude=${city.longitude}`
     }
@@ -681,7 +681,7 @@ onPullDownRefresh(async () => {
 })
 
 function onCardClick(region: SnowRegion) {
-  let url = `/pages/detail/detail?cityId=${region.cityId}`
+  let url = `/pages/detail/detail?cityId=${region.cityId}&cityName=${encodeURIComponent(region.cityName)}`
   if (region.latitude && region.longitude) {
     url += `&latitude=${region.latitude}&longitude=${region.longitude}`
   }
@@ -689,7 +689,7 @@ function onCardClick(region: SnowRegion) {
 }
 
 function onHotCityClick(city: SnowRegion) {
-  let url = `/pages/detail/detail?cityId=${city.cityId}`
+  let url = `/pages/detail/detail?cityId=${city.cityId}&cityName=${encodeURIComponent(city.cityName)}`
   if (city.latitude && city.longitude) {
     url += `&latitude=${city.latitude}&longitude=${city.longitude}`
   }
@@ -700,7 +700,7 @@ function onMarkerTap(e: { markerId?: number; detail?: { markerId?: number } }) {
   const markerId = e.markerId ?? e.detail?.markerId
   if (markerId !== undefined && markerId >= 0 && markerId < mapSnowCities.value.length) {
     const region = mapSnowCities.value[markerId]
-    let url = `/pages/detail/detail?cityId=${region.cityId}`
+    let url = `/pages/detail/detail?cityId=${region.cityId}&cityName=${encodeURIComponent(region.cityName)}`
     if (region.latitude && region.longitude) {
       url += `&latitude=${region.latitude}&longitude=${region.longitude}`
     }
