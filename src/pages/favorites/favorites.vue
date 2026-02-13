@@ -65,14 +65,16 @@
             </view>
             <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
           </view>
-          <!-- 天气提示 -->
-          <view class="mt-2">
-            <view v-if="item.snowForecast" class="flex items-center rounded-full bg-primary-container px-3 py-1" style="display: inline-flex;">
+          <!-- 天气信息 -->
+          <view class="mt-2 flex items-center">
+            <WeatherIcon v-if="item.iconCode" :code="item.iconCode" fill size="20px" style="margin-right: 6px;" />
+            <text v-if="item.temperature" class="text-body-sm text-on-surface-variant">{{ item.temperature }}°C · {{ item.weatherText || '暂无数据' }}</text>
+          </view>
+          <!-- 降雪提醒 -->
+          <view v-if="item.snowForecast" class="mt-2">
+            <view class="flex items-center rounded-full bg-primary-container px-3 py-1" style="display: inline-flex;">
               <Icon name="snowflake" size="12px" class="text-primary mr-1" />
               <text class="text-label-sm text-on-primary-container">{{ formatSnowForecast(item.snowForecast) }}</text>
-            </view>
-            <view v-else-if="item.temperature" class="flex items-center">
-              <text class="text-body-sm text-on-surface-variant">{{ item.temperature }}°C · {{ item.weatherText || '暂无数据' }}</text>
             </view>
           </view>
           <view v-if="getScenics(item.cityId).length > 0" class="flex flex-wrap mt-2">
@@ -95,12 +97,13 @@ import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, getProvince } from '@/models/scenics'
 import { snowLevelToFlakes } from '@/utils/snow'
 import Icon from '@/components/Icon.vue'
+import WeatherIcon from '@/components/WeatherIcon.vue'
 import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
 interface SnowForecastInfo { daysFromNow: number; snowLevel: string; date: string }
-interface FavoriteItem { cityId: string; cityName: string; latitude: number; longitude: number; snowStatus: string; temperature: string; weatherText: string; snowForecast: SnowForecastInfo | null }
+interface FavoriteItem { cityId: string; cityName: string; latitude: number; longitude: number; snowStatus: string; temperature: string; weatherText: string; iconCode: string; snowForecast: SnowForecastInfo | null }
 
 const favorites = ref<FavoriteItem[]>([])
 const cityImages = ref<Record<string, string>>({})

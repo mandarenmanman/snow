@@ -127,9 +127,6 @@ async function fetchCurrentWeather(location) {
 
 /**
  * 调用和风天气 3 天预报 API
- *
- * @param {string} location - 经纬度或城市 ID
- * @returns {Promise<Array>} 3 天预报数据
  */
 async function fetchForecast3d(location) {
   const url = `${WEATHER_API_BASE}/weather/3d`
@@ -137,11 +134,24 @@ async function fetchForecast3d(location) {
     params: { location, key: API_KEY },
     timeout: REQUEST_TIMEOUT,
   })
-
   if (response.data.code !== '200') {
     throw new Error(`QWeather API error: code=${response.data.code}`)
   }
+  return response.data.daily || []
+}
 
+/**
+ * 调用和风天气 15 天预报 API
+ */
+async function fetchForecast15d(location) {
+  const url = `${WEATHER_API_BASE}/weather/15d`
+  const response = await axios.get(url, {
+    params: { location, key: API_KEY },
+    timeout: REQUEST_TIMEOUT,
+  })
+  if (response.data.code !== '200') {
+    return [] // 15d 可能不可用，降级处理
+  }
   return response.data.daily || []
 }
 
@@ -154,7 +164,7 @@ async function handleCitiesAction() {
 }
 
 /**
- * 处理 list action：获取前端展示城市的实时天气
+ * 处理 list action：获取前端展示城市的实时天气 + 15天降雪预报
  */
 async function handleListAction() {
   const cities = await loadCitiesFromDB({ isShow: true })
@@ -162,8 +172,27 @@ async function handleListAction() {
   const weatherPromises = cities.map(async (city) => {
     try {
       const location = buildLocation(city)
-      const weatherNow = await fetchCurrentWeather(location)
+      const [weatherNow, forecast15d] = await Promise.all([
+        fetchCurrentWeather(location),
+        fetchForecast15d(location),
+      ])
       const snowLevel = mapWeatherCodeToSnowLevel(weatherNow.icon)
+
+      // 找最近一次降雪预报
+      let snowForecast = null
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      for (const day of forecast15d) {
+        const daySnow = mapWeatherCodeToSnowLevel(day.iconDay)
+        const nightSnow = mapWeatherCodeToSnowLevel(day.iconNight)
+        const level = getStrongerSnowLevel(daySnow, nightSnow)
+        if (level !== '无') {
+          const forecastDate = new Date(day.fxDate)
+          const diffDays = Math.round((forecastDate - today) / (1000 * 60 * 60 * 24))
+          snowForecast = { daysFromNow: diffDays, snowLevel: level, date: day.fxDate }
+          break
+        }
+      }
 
       return {
         cityId: city.cityId,
@@ -174,6 +203,9 @@ async function handleListAction() {
         windSpeed: Number(weatherNow.windSpeed),
         windDirection: weatherNow.windDir || '',
         snowLevel,
+        iconCode: weatherNow.icon || '',
+        weatherText: weatherNow.text || '',
+        snowForecast,
         latitude: city.latitude,
         longitude: city.longitude,
         updatedAt: weatherNow.obsTime || new Date().toISOString(),
@@ -186,7 +218,6 @@ async function handleListAction() {
 
   const results = await Promise.allSettled(weatherPromises)
 
-  // 收集成功的结果
   const snowRegions = results
     .filter((r) => r.status === 'fulfilled' && r.value !== null)
     .map((r) => r.value)

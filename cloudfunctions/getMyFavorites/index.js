@@ -36,7 +36,7 @@ function buildLocation(longitude, latitude, cityId) {
  */
 async function fetchWeatherInfo(longitude, latitude, cityId) {
   const location = buildLocation(longitude, latitude, cityId)
-  const result = { snowStatus: '未知', temperature: '', weatherText: '', snowForecast: null }
+  const result = { snowStatus: '未知', temperature: '', weatherText: '', iconCode: '', snowForecast: null }
 
   try {
     const [nowRes, forecastRes] = await Promise.all([
@@ -55,6 +55,7 @@ async function fetchWeatherInfo(longitude, latitude, cityId) {
       result.snowStatus = mapWeatherCodeToSnowLevel(now.icon)
       result.temperature = now.temp
       result.weatherText = now.text || ''
+      result.iconCode = now.icon || ''
     }
 
     if (forecastRes.data.code === '200' && forecastRes.data.daily) {
@@ -111,6 +112,7 @@ exports.main = async (event, context) => {
           snowStatus: weather.snowStatus,
           temperature: weather.temperature,
           weatherText: weather.weatherText,
+          iconCode: weather.iconCode,
           snowForecast: weather.snowForecast,
         }
       })

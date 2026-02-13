@@ -22,6 +22,9 @@ export interface SnowRegion {
   snowLevel: SnowLevel  // 降雪强度
   visibility: number    // 能见度（公里）
   updatedAt: string     // ISO 8601 时间戳
+  iconCode?: string     // 和风天气图标代码
+  weatherText?: string  // 天气描述文字
+  snowForecast?: { daysFromNow: number; snowLevel: string; date: string } | null
 }
 
 /**

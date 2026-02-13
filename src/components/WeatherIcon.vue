@@ -21,3 +21,6 @@ const imgStyle = computed(() => {
   return { width: s, height: s }
 })
 </script>
+
+<style scoped>
+</style>
