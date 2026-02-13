@@ -177,6 +177,7 @@ const m3Transition = {
  * TwindCSS 配置导出
  */
 export const twindConfig = defineConfig({
+  preflight: false,
   presets: [presetTailwind()],
   theme: {
     extend: {

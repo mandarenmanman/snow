@@ -9,8 +9,8 @@ export function getNavBarInfo() {
 
   // #ifdef MP-WEIXIN
   try {
-    const sysInfo = uni.getSystemInfoSync()
-    statusBarHeight = sysInfo.statusBarHeight ?? 20
+    const windowInfo = wx.getWindowInfo()
+    statusBarHeight = windowInfo.statusBarHeight ?? 20
 
     const capsule = wx.getMenuButtonBoundingClientRect()
     // 导航栏高度 = 胶囊底部 + 胶囊顶部与状态栏的间距

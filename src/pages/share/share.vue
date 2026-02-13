@@ -10,7 +10,7 @@
     </view>
     <view class="navbar-placeholder" :style="{ height: navTotalHeight + 'px' }"></view>
 
-    <scroll-view scroll-y class="scroll-content">
+    <scroll-view scroll-y :style="{ height: scrollHeight }">
       <view class="page-body">
         <!-- 海报 -->
         <snapshot id="shareCard" class="card-wrapper">
@@ -131,6 +131,10 @@ const { statusBarHeight, totalHeight } = getNavBarInfo()
 const navPadding = `${statusBarHeight}px`
 const navTotalHeight = totalHeight
 
+// skyline 下 scroll-view 必须有明确高度
+const windowInfo = uni.getSystemInfoSync()
+const scrollHeight = `${windowInfo.windowHeight - totalHeight}px`
+
 function goBack() {
   uni.navigateBack({ delta: 1 })
 }
@@ -179,9 +183,12 @@ async function handleShare() {
             fail: (err: any) => {
               uni.hideLoading()
               console.error('takeSnapshot 失败:', err)
+              const isDevTool = err?.errMsg?.includes('webview renderer is not supported')
               uni.showModal({
                 title: '提示',
-                content: '海报生成失败，您可以截屏保存当前页面',
+                content: isDevTool
+                  ? '开发者工具不支持 skyline 截图，请使用真机预览测试分享功能'
+                  : '海报生成失败，您可以截屏保存当前页面',
                 confirmText: '知道了',
                 showCancel: false,
               })
@@ -265,7 +272,6 @@ async function loadQRCode() {
   font-family: 'FontAwesome' !important;
   font-style: normal;
   font-weight: 900;
-  -webkit-font-smoothing: antialiased;
 }
 
 .fa-arrow-left::before {
@@ -325,10 +331,6 @@ async function loadQRCode() {
 
 .navbar-placeholder {
   flex-shrink: 0;
-}
-
-.scroll-content {
-  flex: 1;
 }
 
 /* ---- 页面主体 ---- */

@@ -6,27 +6,35 @@
   "versionCode": "100",
   "transformPx": false,
   "mp-weixin": {
+    "__usePrivacyCheck__": true,
     "appid": "wx0000000000000000",
-    "lazyCodeLoading": "requiredComponents",
-    "componentFramework": "glass-easel",
     "setting": {
       "urlCheck": false,
       "es6": true,
       "enhance": true,
       "postcss": true,
-      "minified": true
+      "minified": true,
+      "newFeature": true,
+      "bigPackageSizeSupport": true
     },
     "usingComponents": true,
+    "lazyCodeLoading": "requiredComponents",
     "optimization": {
       "subPackages": true
     },
-    "cloudfunctionRoot": "cloudfunctions/",
+    "componentFramework": "glass-easel",
     "rendererOptions": {
       "skyline": {
         "defaultDisplayBlock": true,
         "disableABTest": true,
         "sdkVersionBegin": "3.0.0",
         "sdkVersionEnd": "15.255.255"
+      }
+    },
+    "cloudfunctionRoot": "cloudfunctions/",
+    "permission": {
+      "scope.userLocation": {
+        "desc": "用于获取附近降雪地点信息"
       }
     }
   },
