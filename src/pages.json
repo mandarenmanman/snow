@@ -28,11 +28,13 @@
     },
     {
       "path": "pages/share/share",
-      "style": {
-        "navigationStyle": "custom",
-        "renderer": "skyline",
-        "disableScroll": true
-      }
+          "style": {
+            "navigationBarTitleText": "钓点海报",
+            "renderer": "skyline",
+            "componentFramework": "glass-easel",
+            "disableScroll": true,
+            "navigationStyle": "custom"
+          }
     }
   ],
   "globalStyle": {
