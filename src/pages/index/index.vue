@@ -66,7 +66,7 @@
           @click="onAlertBannerClick"
         >
           <view class="flex items-center flex-1 min-w-0">
-            <text style="font-size: 20px;" class="mr-3">❄</text>
+            <Icon name="snowflake" size="20px" class="mr-3 text-on-surface" />
             <view class="flex-1 min-w-0">
               <text class="text-title-sm text-on-surface block">你关注的「{{ snowAlertCity.cityName }}」即将降雪</text>
               <text class="text-body-sm text-on-surface-variant block mt-1">未来3天预计有{{ snowAlertCity.snowLevel }}，点击查看</text>
@@ -80,7 +80,7 @@
           class="rounded-3xl bg-surface-container px-4 py-3 flex items-center justify-between"
         >
           <view class="flex items-center flex-1 min-w-0">
-            <text style="font-size: 20px;" class="mr-3">🔔</text>
+            <Icon name="bell" size="20px" class="mr-3 text-on-surface-variant" />
             <view class="flex-1 min-w-0">
               <text class="text-title-sm text-on-surface block">开启降雪提醒</text>
               <text class="text-body-sm text-on-surface-variant block mt-1">订阅城市，未来降雪提前通知你</text>
