@@ -9,27 +9,6 @@
         <text class="text-body-md text-on-surface-variant block mt-1">我们告诉你'现在出发，还能赶上长安的瑞雪'。</text>
     </view>
 
-    <!-- 日期选择 -->
-    <view class="px-4 mb-3">
-      <scroll-view scroll-x class="overflow-x-auto">
-        <view class="flex gap-2">
-          <view
-            v-for="d in dateOptions"
-            :key="d.value"
-            class="flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200"
-            :class="selectedDate === d.value ? 'bg-primary' : 'bg-surface-container'"
-            hover-class="hover-opacity-80"
-            @click="onDateSelect(d.value)"
-          >
-            <text
-              class="text-label-lg whitespace-nowrap"
-              :class="selectedDate === d.value ? 'text-white' : 'text-on-surface-variant'"
-            >{{ d.label }}</text>
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-
     <!-- 降雪地图 -->
     <view class="px-4 mb-3">
       <view class="rounded-3xl overflow-hidden shadow-elevation-1">
@@ -211,7 +190,6 @@ const allRegions = ref<SnowRegion[]>([])
 const loading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('获取降雪数据失败，请检查网络连接')
-const selectedDate = ref('')
 const cityImages = ref<Record<string, string>>({})
 const userLat = ref(0)
 const userLon = ref(0)
@@ -235,23 +213,6 @@ function getCityPrompt(cityId: string, cityName: string): string {
   const spot = scenics.length > 0 ? scenics[0] : cityName
   return `${cityName}${spot}雪景，冬日白雪覆盖，摄影作品风格，高清`
 }
-
-/** 生成日期选项：今天 + 未来 3 天 */
-const dateOptions = computed(() => {
-  const options: { label: string; value: string }[] = []
-  const now = new Date()
-  for (let i = 0; i < 4; i++) {
-    const d = new Date(now)
-    d.setDate(d.getDate() + i)
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    const value = `${y}-${m}-${day}`
-    const label = i === 0 ? '今天' : i === 1 ? '明天' : i === 2 ? '后天' : `${m}-${day}`
-    options.push({ label, value })
-  }
-  return options
-})
 
 /** 图片缓存键前缀 */
 const IMG_CACHE_PREFIX = 'city_img_'
@@ -673,12 +634,6 @@ async function loadData() {
   }
 }
 
-function onDateSelect(date: string) {
-  selectedDate.value = date
-  // TODO: 按日期筛选降雪预报数据
-  loadData()
-}
-
 onPullDownRefresh(async () => {
   console.log('[下拉刷新] 触发')
   try {
@@ -732,7 +687,6 @@ function onFabClick() {
 }
 
 onLoad(async () => {
-  selectedDate.value = dateOptions.value[0]?.value ?? ''
   // 获取用户位置
   try {
     const res = await new Promise<UniApp.GetLocationSuccess>((resolve, reject) => {
