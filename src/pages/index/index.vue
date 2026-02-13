@@ -1,5 +1,5 @@
 <template>
-  <view class="min-h-screen bg-surface" :style="{ paddingTop: navPadding }">
+  <view class="bg-surface" :style="{ paddingTop: navPadding }">
     <OfflineBanner />
 
     <!-- 标题 -->
@@ -69,7 +69,7 @@
             <Icon name="snowflake" size="20px" class="mr-3 text-on-surface" />
             <view class="flex-1 min-w-0">
               <text class="text-title-sm text-on-surface block">你关注的「{{ snowAlertCity.cityName }}」即将降雪</text>
-              <text class="text-body-sm text-on-surface-variant block mt-1">未来3天预计有{{ snowAlertCity.snowLevel }}，点击查看</text>
+              <text class="text-body-sm text-on-surface-variant block mt-1">{{ snowAlertCity.desc }}，点击查看</text>
             </view>
           </view>
           <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
@@ -206,8 +206,7 @@
 import { ref, computed } from 'vue'
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
 import type { SnowRegion } from '@/models/types'
-import { fetchSnowRegions, filterSnowingCities } from '@/services/snow-service'
-import { forceRefresh } from '@/utils/cache'
+import { fetchSnowRegions, fetchSnowRegionsRemote, filterSnowingCities } from '@/services/snow-service'
 import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, loadCityList, getHotCities } from '@/models/scenics'
 import type { CityInfo } from '@/models/scenics'
@@ -228,8 +227,9 @@ const userLon = ref(0)
 
 /** 用户已订阅的城市 ID 集合 */
 const subscribedCityIds = ref<Set<string>>(new Set())
-/** 用户订阅列表（含订阅状态） */
-interface FavItem { cityId: string; cityName: string; subscribed: boolean }
+/** 用户订阅列表（含订阅状态和天气信息） */
+interface SnowForecastInfo { daysFromNow: number; snowLevel: string; date: string }
+interface FavItem { cityId: string; cityName: string; subscribed: boolean; snowForecast?: SnowForecastInfo | null }
 const userFavorites = ref<FavItem[]>([])
 
 const { totalHeight } = getNavBarInfo()
@@ -451,14 +451,26 @@ const hasAnySubscription = computed(() => subscribedCityIds.value.size > 0)
 const snowAlertCity = computed(() => {
   for (const fav of userFavorites.value) {
     if (!fav.subscribed) continue
+
+    // 优先用15天预报数据
+    if (fav.snowForecast) {
+      const f = fav.snowForecast
+      let desc: string
+      if (f.daysFromNow === 0) desc = `今天有${f.snowLevel}`
+      else if (f.daysFromNow === 1) desc = `明天有${f.snowLevel}`
+      else if (f.daysFromNow === 2) desc = `后天有${f.snowLevel}`
+      else desc = `未来${f.daysFromNow}天有${f.snowLevel}`
+      return { cityId: fav.cityId, cityName: fav.cityName, snowLevel: f.snowLevel, desc }
+    }
+
+    // 回退：检查实时数据
     const region = hotCities.value.find((c) => c.cityId === fav.cityId)
     if (region && region.snowLevel !== '无') {
-      return { cityId: region.cityId, cityName: fav.cityName, snowLevel: region.snowLevel }
+      return { cityId: region.cityId, cityName: fav.cityName, snowLevel: region.snowLevel, desc: `正在下${region.snowLevel}` }
     }
-    // 也检查 allRegions
     const fromAll = allRegions.value.find((r) => r.cityId === fav.cityId && r.snowLevel !== '无')
     if (fromAll) {
-      return { cityId: fromAll.cityId, cityName: fav.cityName, snowLevel: fromAll.snowLevel }
+      return { cityId: fromAll.cityId, cityName: fav.cityName, snowLevel: fromAll.snowLevel, desc: `正在下${fromAll.snowLevel}` }
     }
   }
   return null
@@ -469,9 +481,9 @@ async function loadSubscriptions() {
   try {
     // #ifdef MP-WEIXIN
     const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
-    const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string; cityName: string; subscribed?: boolean }> } }
+    const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string; cityName: string; subscribed?: boolean; snowForecast?: SnowForecastInfo | null }> } }
     const favs = result.data?.favorites ?? []
-    userFavorites.value = favs.map((f) => ({ cityId: f.cityId, cityName: f.cityName, subscribed: !!f.subscribed }))
+    userFavorites.value = favs.map((f) => ({ cityId: f.cityId, cityName: f.cityName, subscribed: !!f.subscribed, snowForecast: f.snowForecast || null }))
     subscribedCityIds.value = new Set(favs.filter((f) => f.subscribed).map((f) => f.cityId))
     // #endif
   } catch {}
@@ -635,13 +647,20 @@ function onDateSelect(date: string) {
 }
 
 onPullDownRefresh(async () => {
+  console.log('[下拉刷新] 触发')
   try {
-    const regions = await forceRefresh<SnowRegion[]>('snow_regions', fetchSnowRegions)
+    // 并发刷新降雪数据和收藏列表
+    const [regions] = await Promise.all([
+      fetchSnowRegionsRemote(),
+      loadSubscriptions(),
+    ])
     allRegions.value = regions
     hasError.value = false
+    console.log('[下拉刷新] 成功，城市数:', regions.length)
   } catch (err) {
     hasError.value = true
     errorMessage.value = '刷新失败，请稍后重试'
+    console.error('[下拉刷新] 失败:', err)
   } finally {
     uni.stopPullDownRefresh()
   }

@@ -106,23 +106,9 @@ function formatUpdatedTime(isoString: string): string {
 }
 
 /**
- * 通过云函数获取全国降雪城市列表（带缓存）
- *
- * 优先从本地缓存读取数据，缓存过期时调用 wx.cloud.callFunction
- * 获取最新数据并更新缓存。
- *
- * @returns 降雪区域数据数组
- *
- * Requirements: 1.1, 6.1
+ * 直接从云函数获取降雪数据（跳过缓存读取，用于强制刷新）
  */
-export async function fetchSnowRegions(): Promise<SnowRegion[]> {
-  // 优先从缓存读取
-  const cached = getCache<SnowRegion[]>(SNOW_REGIONS_CACHE_KEY)
-  if (cached !== null) {
-    return cached
-  }
-
-  // 缓存过期或不存在，调用云函数获取最新数据
+export async function fetchSnowRegionsRemote(): Promise<SnowRegion[]> {
   // #ifdef MP-WEIXIN
   const res = await wx.cloud.callFunction({
     name: 'getSnowData',
@@ -141,6 +127,26 @@ export async function fetchSnowRegions(): Promise<SnowRegion[]> {
   // #ifndef MP-WEIXIN
   return []
   // #endif
+}
+
+/**
+ * 通过云函数获取全国降雪城市列表（带缓存）
+ *
+ * 优先从本地缓存读取数据，缓存过期时调用 wx.cloud.callFunction
+ * 获取最新数据并更新缓存。
+ *
+ * @returns 降雪区域数据数组
+ *
+ * Requirements: 1.1, 6.1
+ */
+export async function fetchSnowRegions(): Promise<SnowRegion[]> {
+  // 优先从缓存读取
+  const cached = getCache<SnowRegion[]>(SNOW_REGIONS_CACHE_KEY)
+  if (cached !== null) {
+    return cached
+  }
+
+  return fetchSnowRegionsRemote()
 }
 
 

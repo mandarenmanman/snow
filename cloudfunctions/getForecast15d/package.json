@@ -1,7 +1,7 @@
 {
-  "name": "manageFavorites",
+  "name": "getForecast15d",
   "version": "1.0.0",
-  "description": "管理收藏城市云函数",
+  "description": "查询单个城市实时天气 + 15天预报",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3",

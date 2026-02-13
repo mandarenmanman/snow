@@ -65,6 +65,16 @@
             </view>
             <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
           </view>
+          <!-- 天气提示 -->
+          <view class="mt-2">
+            <view v-if="item.snowForecast" class="flex items-center rounded-full bg-primary-container px-3 py-1" style="display: inline-flex;">
+              <Icon name="snowflake" size="12px" class="text-primary mr-1" />
+              <text class="text-label-sm text-on-primary-container">{{ formatSnowForecast(item.snowForecast) }}</text>
+            </view>
+            <view v-else-if="item.temperature" class="flex items-center">
+              <text class="text-body-sm text-on-surface-variant">{{ item.temperature }}°C · {{ item.weatherText || '暂无数据' }}</text>
+            </view>
+          </view>
           <view v-if="getScenics(item.cityId).length > 0" class="flex flex-wrap mt-2">
             <text
               v-for="spot in getScenics(item.cityId)"
@@ -89,7 +99,8 @@ import ErrorRetry from '@/components/ErrorRetry.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
-interface FavoriteItem { cityId: string; cityName: string; latitude: number; longitude: number; snowStatus: string }
+interface SnowForecastInfo { daysFromNow: number; snowLevel: string; date: string }
+interface FavoriteItem { cityId: string; cityName: string; latitude: number; longitude: number; snowStatus: string; temperature: string; weatherText: string; snowForecast: SnowForecastInfo | null }
 
 const favorites = ref<FavoriteItem[]>([])
 const cityImages = ref<Record<string, string>>({})
@@ -195,6 +206,16 @@ async function onRemove(item: FavoriteItem) {
       }
     },
   })
+}
+
+/**
+ * 格式化降雪预报提示文案
+ */
+function formatSnowForecast(forecast: SnowForecastInfo): string {
+  if (forecast.daysFromNow === 0) return `今天有${forecast.snowLevel}`
+  if (forecast.daysFromNow === 1) return `明天有${forecast.snowLevel}`
+  if (forecast.daysFromNow === 2) return `后天有${forecast.snowLevel}`
+  return `未来${forecast.daysFromNow}天有${forecast.snowLevel}`
 }
 
 function getSnowBadgeBg(level: string): string {
