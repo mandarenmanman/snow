@@ -35,6 +35,10 @@ export interface SnowForecast {
   accumulation: number  // 预计累计降雪量（毫米）
   tempHigh: number      // 最高温度
   tempLow: number       // 最低温度
+  weatherTextDay?: string   // 白天天气描述
+  weatherTextNight?: string // 夜间天气描述
+  windDirDay?: string       // 白天风向
+  windScaleDay?: string     // 白天风力等级
 }
 
 /**

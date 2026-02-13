@@ -106,7 +106,7 @@
 
       <!-- 预报 -->
       <view class="mb-4">
-        <text class="text-title-md text-on-surface block mb-3">未来 3 天降雪预报</text>
+        <text class="text-title-md text-on-surface block mb-3">未来 15 天降雪预报</text>
         <view v-if="cityDetail.forecast.length > 0" class="rounded-3xl bg-surface-container shadow-elevation-1 overflow-hidden">
           <ForecastItem v-for="item in cityDetail.forecast" :key="item.date" :forecast="item" />
         </view>
@@ -215,7 +215,7 @@ async function loadDetail() {
   hasError.value = false
   try {
     // #ifdef MP-WEIXIN
-    const res = await wx.cloud.callFunction({ name: 'getSnowData', data: { action: 'detail', cityId: cityId.value, longitude: longitude.value || undefined, latitude: latitude.value || undefined } })
+    const res = await wx.cloud.callFunction({ name: 'getForecast15d', data: { cityId: cityId.value, longitude: longitude.value || undefined, latitude: latitude.value || undefined } })
     const result = res.result as { code?: number; data?: CityDetail }
     if (result.code === 0 && result.data) cityDetail.value = result.data
     // #endif

@@ -480,7 +480,7 @@ const snowAlertCity = computed(() => {
 async function loadSubscriptions() {
   try {
     // #ifdef MP-WEIXIN
-    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
+    const res = await wx.cloud.callFunction({ name: 'getMyFavorites' })
     const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string; cityName: string; subscribed?: boolean; snowForecast?: SnowForecastInfo | null }> } }
     const favs = result.data?.favorites ?? []
     userFavorites.value = favs.map((f) => ({ cityId: f.cityId, cityName: f.cityName, subscribed: !!f.subscribed, snowForecast: f.snowForecast || null }))

@@ -118,7 +118,7 @@ async function loadFavorites() {
   hasError.value = false
   try {
     // #ifdef MP-WEIXIN
-    const res = await wx.cloud.callFunction({ name: 'manageFavorites', data: { action: 'list' } })
+    const res = await wx.cloud.callFunction({ name: 'getMyFavorites' })
     const result = res.result as { code?: number; data?: { favorites?: FavoriteItem[] } }
     favorites.value = result.data?.favorites ?? []
     // #endif
