@@ -410,7 +410,7 @@ function getSnowMarkerLabel(region: SnowRegion): string {
   if (region.snowForecast) {
     const f = region.snowForecast
     const dayLabel = f.daysFromNow === 0 ? '今天' : f.daysFromNow === 1 ? '明天' : f.daysFromNow === 2 ? '后天' : `${f.daysFromNow}天后`
-    return `🔮 ${dayLabel}${f.snowLevel}`
+    return `❄ ${dayLabel}${f.snowLevel}`
   }
   return '❄'
 }
