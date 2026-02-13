@@ -24,8 +24,17 @@ const REQUEST_TIMEOUT = 10000
 /** 和风天气 API 基础 URL */
 const WEATHER_API_BASE = 'https://nf5g7caymw.re.qweatherapi.com/v7'
 
-/** 订阅消息模板 ID（需要在微信后台配置） */
-const TEMPLATE_ID = 'YOUR_TEMPLATE_ID'
+/** 订阅消息模板 ID（需要在微信公众平台「订阅消息」中配置） */
+const TEMPLATE_ID = 'Qd_NN-RSHCa2reTPIC7MHo_PMwN0MLLK1Y4jfYlAths'
+
+/**
+ * 模板字段对应（模板编号 482 — 天气提醒）：
+ * date1             — 日期
+ * phrase2           — 城市（≤5字）
+ * phrase3           — 天气（≤5字）
+ * character_string4 — 温度
+ * thing5            — 温馨提示（≤20字）
+ */
 
 /**
  * 将和风天气天气代码映射为降雪等级
@@ -167,10 +176,7 @@ async function updateSnowStatus(cityId, snowLevel) {
 }
 
 /**
- * 查询收藏了指定城市的所有用户 openId 列表
- *
- * 由于云数据库单次查询最多返回 100 条记录，
- * 使用分页查询获取所有匹配记录。
+ * 查询收藏了指定城市且开启了订阅的用户 openId 列表
  *
  * @param {string} cityId - 城市 ID
  * @returns {Promise<string[]>} 用户 openId 列表
@@ -183,7 +189,7 @@ async function getUsersForCity(cityId) {
 
   while (hasMore) {
     const { data } = await favoritesCollection
-      .where({ cityId })
+      .where({ cityId, subscribed: true })
       .skip(offset)
       .limit(MAX_LIMIT)
       .get()
@@ -201,25 +207,25 @@ async function getUsersForCity(cityId) {
 /**
  * 向用户发送降雪提醒订阅消息
  *
- * 使用微信订阅消息 API 发送通知。
- * 如果发送失败（如用户未授权订阅消息），记录日志并继续，不中断流程。
- *
  * @param {string} openId - 用户 OpenID
  * @param {string} cityId - 城市 ID
  * @param {string} cityName - 城市名称
  * @param {string} snowLevel - 降雪等级
+ * @param {string} temperature - 当前温度
  * @returns {Promise<boolean>} 是否发送成功
  */
-async function sendSubscriptionMessage(openId, cityId, cityName, snowLevel) {
+async function sendSubscriptionMessage(openId, cityId, cityName, snowLevel, temperature) {
   try {
     await cloud.openapi.subscribeMessage.send({
       touser: openId,
       templateId: TEMPLATE_ID,
-      page: `/pages/detail/detail?cityId=${cityId}`,
+      page: `/pages/detail/detail?cityId=${cityId}&cityName=${encodeURIComponent(cityName)}`,
       data: {
-        thing1: { value: cityName },      // 城市名称
-        thing2: { value: snowLevel },     // 降雪等级
-        time3: { value: new Date().toLocaleString('zh-CN') },  // 通知时间
+        date1: { value: new Date().toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' }) },
+        phrase2: { value: cityName.slice(0, 5) },
+        phrase3: { value: snowLevel },
+        character_string4: { value: `${temperature}°C` },
+        thing5: { value: `${cityName}正在下${snowLevel}，注意保暖` },
       },
     })
     console.log(`Alert sent to ${openId} for ${cityName} (${snowLevel})`)
@@ -300,7 +306,8 @@ exports.main = async (event, context) => {
               openId,
               city.cityId,
               city.cityName,
-              currentSnowLevel
+              currentSnowLevel,
+              weatherNow.temp || ''
             )
             if (success) {
               alertsSent++

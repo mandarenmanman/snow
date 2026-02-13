@@ -500,20 +500,29 @@ async function loadSubscriptions() {
 }
 
 /** 切换订阅状态 */
+/** 微信订阅消息模板 ID — 在微信公众平台「订阅消息」中申请 */
+const SNOW_ALERT_TMPL_ID = 'Qd_NN-RSHCa2reTPIC7MHo_PMwN0MLLK1Y4jfYlAths'
+
 async function onToggleSubscribe(city: SnowRegion) {
   const currentlySubscribed = isSubscribed(city.cityId)
   const newState = !currentlySubscribed
 
-  // 如果是开启订阅，先请求微信订阅消息授权
+  // 开启订阅时，先拉起微信订阅消息授权弹窗
   if (newState) {
     try {
       // #ifdef MP-WEIXIN
-      await wx.requestSubscribeMessage({
-        tmplIds: ['your_template_id'],  // TODO: 替换为实际的模板 ID
+      const subRes = await wx.requestSubscribeMessage({
+        tmplIds: [SNOW_ALERT_TMPL_ID],
       })
+      // 用户拒绝了也继续添加收藏，只是收不到推送
+      if (subRes[SNOW_ALERT_TMPL_ID] === 'accept') {
+        console.log('用户同意接收降雪提醒')
+      } else {
+        console.log('用户拒绝或关闭了订阅消息授权')
+      }
       // #endif
     } catch {
-      // 用户拒绝授权，仍然可以在 app 内提醒
+      // 弹窗异常，继续流程
     }
   }
 
