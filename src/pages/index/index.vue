@@ -59,24 +59,9 @@
       <!-- 降雪提醒横幅 -->
       <view class="px-4 mb-3">
         <!-- 有订阅且即将降雪 -->
-        <view
-          v-if="snowAlertCity"
-          class="rounded-3xl bg-primary-container px-4 py-3 flex items-center justify-between"
-          hover-class="hover-opacity-80"
-          @click="onAlertBannerClick"
-        >
-          <view class="flex items-center flex-1 min-w-0">
-            <Icon name="snowflake" size="20px" class="mr-3 text-on-surface" />
-            <view class="flex-1 min-w-0">
-              <text class="text-title-sm text-on-surface block">你关注的「{{ snowAlertCity.cityName }}」即将降雪</text>
-              <text class="text-body-sm text-on-surface-variant block mt-1">{{ snowAlertCity.desc }}，点击查看</text>
-            </view>
-          </view>
-          <Icon name="chevron-right" size="14px" class="text-on-surface-variant flex-shrink-0" />
-        </view>
+      
         <!-- 未订阅任何城市 -->
-        <view
-          v-else-if="!hasAnySubscription"
+        <view 
           class="rounded-3xl bg-surface-container px-4 py-3 flex items-center justify-between"
         >
           <view class="flex items-center flex-1 min-w-0">
@@ -86,46 +71,11 @@
               <text class="text-body-sm text-on-surface-variant block mt-1">订阅城市，未来降雪提前通知你</text>
             </view>
           </view>
-          <view
-            class="rounded-full bg-primary px-4 py-1 flex-shrink-0"
-            hover-class="hover-opacity-80"
-            @click="onGoSubscribe"
-          >
-            <text class="text-label-md text-white">去订阅</text>
-          </view>
+          
         </view>
       </view>
 
-      <!-- 我的收藏 -->
-      <view v-if="userFavorites.length > 0" class="px-4 mb-4">
-        <text class="text-title-md text-on-surface block mb-3">我的收藏</text>
-        <scroll-view scroll-x class="overflow-x-auto">
-          <view class="flex gap-3">
-            <view
-              v-for="fav in userFavorites"
-              :key="fav.cityId"
-              class="flex-shrink-0 rounded-2xl bg-surface-container shadow-elevation-1 overflow-hidden transition-all duration-200"
-              style="width: 160px;"
-              hover-class="hover-elevation-2"
-              @click="onFavCardClick(fav)"
-            >
-              <view class="p-3 flex flex-col items-center">
-                <WeatherIcon v-if="fav.iconCode" :code="fav.iconCode" fill size="36px" />
-                <Icon v-else name="cloud" size="36px" class="text-on-surface-variant" />
-                <text class="text-title-sm text-on-surface mt-2">{{ fav.cityName }}</text>
-                <text v-if="fav.temperature" class="text-headline-sm font-bold text-on-surface mt-1">{{ fav.temperature }}°</text>
-                <text class="text-body-sm text-on-surface-variant mt-1">{{ fav.weatherText || '暂无数据' }}</text>
-                <view v-if="fav.snowForecast" class="mt-2 rounded-full bg-primary-container px-3 py-1 flex items-center">
-                  <Icon name="snowflake" size="10px" class="text-primary mr-1" />
-                  <text class="text-label-sm text-on-primary-container">{{ formatSnowForecast(fav.snowForecast) }}</text>
-                </view>
-              </view>
-            </view>
-          </view>
-        </scroll-view>
-      </view>
-
-      <!-- 热门旅游城市 -->
+      <!-- 城市列表 -->
       <view class="px-4 mb-4" style="padding-bottom: 180px;">
         <view class="flex flex-col gap-3">
           <view
@@ -245,7 +195,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
-import type { SnowRegion } from '@/models/types'
+import type { SnowRegion, SnowLevel } from '@/models/types'
 import { fetchSnowRegions, fetchSnowRegionsRemote, filterSnowingCities } from '@/services/snow-service'
 import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, loadCityList, getHotCities } from '@/models/scenics'
@@ -321,44 +271,71 @@ function calcDistance(lat1: number, lon1: number, lat2: number, lon2: number): n
 /** 降雪等级权重，用于排序 */
 const SNOW_ORDER: Record<string, number> = { '暴雪': 4, '大雪': 3, '中雪': 2, '小雪': 1, '无': 0 }
 
-/** 热门城市数据（从 DB 城市列表 + 天气数据合并），有雪的按距离由近到远排前面，无雪的按距离由近到远排后面 */
+/** 合并列表：收藏城市（含天气数据）排前面，热门城市排后面，去重 */
 const hotCities = computed(() => {
-  const list = hotCityInfos.value.map((info) => {
-    const found = allRegions.value.find((r: SnowRegion) => r.cityId === info.cityId)
-    if (found) return found
-    return {
-      cityId: info.cityId,
-      cityName: info.cityName,
-      province: info.province,
-      latitude: info.latitude,
-      longitude: info.longitude,
-      temperature: 0,
+  const merged = new Map<string, SnowRegion>()
+
+  // 1. 先加收藏城市（用 getMyFavorites 返回的天气数据）
+  for (const fav of userFavorites.value) {
+    merged.set(fav.cityId, {
+      cityId: fav.cityId,
+      cityName: fav.cityName,
+      province: '',
+      latitude: fav.latitude || 0,
+      longitude: fav.longitude || 0,
+      temperature: Number(fav.temperature) || 0,
       humidity: 0,
       windSpeed: 0,
       windDirection: '',
-      snowLevel: '无' as const,
+      snowLevel: (fav.snowStatus || '无') as SnowLevel,
       visibility: 0,
       updatedAt: '',
-    }
-  })
-  // 模拟数据：用于展示降雪效果
-  list.push({
-    cityId: '101131410',
-    cityName: '阿勒泰',
-    province: '新疆',
-    latitude: 47.85,
-    longitude: 88.14,
-    temperature: -15,
-    humidity: 78,
-    windSpeed: 12,
-    windDirection: '西北风',
-    snowLevel: '大雪' as const,
-    visibility: 2,
-    updatedAt: new Date().toISOString(),
-  })
+      iconCode: fav.iconCode || '',
+      weatherText: fav.weatherText || '',
+      snowForecast: fav.snowForecast || null,
+    })
+  }
 
-  // 排序：有雪在前（按距离近到远），无雪在后（按距离近到远）
+  // 2. 用 allRegions 的数据覆盖/补充（更完整）
+  for (const r of allRegions.value) {
+    if (merged.has(r.cityId)) {
+      // 收藏城市用 allRegions 的完整数据覆盖，但保留 snowForecast
+      const existing = merged.get(r.cityId)!
+      merged.set(r.cityId, { ...r, snowForecast: r.snowForecast || existing.snowForecast })
+    }
+  }
+
+  // 3. 加热门城市（不在收藏里的）
+  for (const info of hotCityInfos.value) {
+    if (merged.has(info.cityId)) continue
+    const found = allRegions.value.find((r: SnowRegion) => r.cityId === info.cityId)
+    if (found) {
+      merged.set(info.cityId, found)
+    } else {
+      merged.set(info.cityId, {
+        cityId: info.cityId,
+        cityName: info.cityName,
+        province: info.province,
+        latitude: info.latitude,
+        longitude: info.longitude,
+        temperature: 0,
+        humidity: 0,
+        windSpeed: 0,
+        windDirection: '',
+        snowLevel: '无' as const,
+        visibility: 0,
+        updatedAt: '',
+      })
+    }
+  }
+
+  const list = Array.from(merged.values())
+
+  // 排序：收藏在前，有雪优先，再按距离
   return list.sort((a, b) => {
+    const aFav = userFavorites.value.some((f) => f.cityId === a.cityId) ? 1 : 0
+    const bFav = userFavorites.value.some((f) => f.cityId === b.cityId) ? 1 : 0
+    if (aFav !== bFav) return bFav - aFav
     const aSnow = (SNOW_ORDER[a.snowLevel] || 0) > 0 ? 1 : 0
     const bSnow = (SNOW_ORDER[b.snowLevel] || 0) > 0 ? 1 : 0
     if (aSnow !== bSnow) return bSnow - aSnow
@@ -525,7 +502,7 @@ async function loadSubscriptions() {
     const result = res.result as { code?: number; data?: { favorites?: Array<{ cityId: string; cityName: string; subscribed?: boolean; snowForecast?: SnowForecastInfo | null; temperature?: string; weatherText?: string; iconCode?: string; snowStatus?: string; latitude?: number; longitude?: number }> } }
     const favs = result.data?.favorites ?? []
     userFavorites.value = favs.map((f) => ({ cityId: f.cityId, cityName: f.cityName, subscribed: !!f.subscribed, snowForecast: f.snowForecast || null, temperature: f.temperature || '', weatherText: f.weatherText || '', iconCode: f.iconCode || '', snowStatus: f.snowStatus || '', latitude: f.latitude || 0, longitude: f.longitude || 0 }))
-    subscribedCityIds.value = new Set(favs.filter((f) => f.subscribed).map((f) => f.cityId))
+    subscribedCityIds.value = new Set(favs.map((f) => f.cityId))
     // #endif
   } catch {}
 }
@@ -624,17 +601,7 @@ function formatSnowForecast(forecast: SnowForecastInfo): string {
   return `${forecast.daysFromNow}天后${forecast.snowLevel}`
 }
 
-/** 收藏卡片点击 */
-function onFavCardClick(fav: FavItem) {
-  let url = `/pages/detail/detail?cityId=${fav.cityId}`
-  if (fav.latitude && fav.longitude) {
-    url += `&latitude=${fav.latitude}&longitude=${fav.longitude}`
-  }
-  if (fav.cityName) {
-    url += `&cityName=${encodeURIComponent(fav.cityName)}`
-  }
-  uni.navigateTo({ url })
-}
+/** 收藏卡片点击 — 已合并到 hotCities，不再单独使用 */
 
 /**
  * 获取城市景区图片（优先读缓存，没有则调用 AI 生成）
