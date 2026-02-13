@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, getCurrentInstance } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getNavBarInfo } from '@/utils/navbar'
 import WeatherIcon from '@/components/WeatherIcon.vue'
@@ -154,7 +154,8 @@ async function handleShare() {
 
     setTimeout(() => {
       // #ifdef MP-WEIXIN
-      const query = wx.createSelectorQuery()
+      const instance = getCurrentInstance()
+      const query = wx.createSelectorQuery().in(instance?.proxy)
       query.select('#shareCard').node().exec((res: any) => {
         if (res && res[0] && res[0].node) {
           const node = res[0].node
@@ -175,11 +176,13 @@ async function handleShare() {
                     style: 'v2',
                     entrys: ['shareAppMessage', 'shareTimeline', 'addToFavorites', 'saveImageToPhotosAlbum'],
                   })
+                  isGenerating.value = false
                 },
                 fail: (err: any) => {
                   uni.hideLoading()
                   console.error('写入文件失败:', err)
                   uni.showToast({ title: '生成失败', icon: 'none' })
+                  isGenerating.value = false
                 },
               })
             },
@@ -192,16 +195,17 @@ async function handleShare() {
                 confirmText: '知道了',
                 showCancel: false,
               })
+              isGenerating.value = false
             },
           })
         } else {
           uni.hideLoading()
           uni.showToast({ title: '截图组件未就绪', icon: 'none' })
+          isGenerating.value = false
         }
-        isGenerating.value = false
       })
       // #endif
-    }, 300)
+    }, 500)
   } catch {
     uni.hideLoading()
     uni.showToast({ title: '生成失败', icon: 'none' })
