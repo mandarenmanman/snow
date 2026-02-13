@@ -5,8 +5,13 @@
       <view class="detail-topbar-btn" hover-class="hover-opacity-60" @click="goBack">
         <Icon name="arrow-left" size="18px" color="#fff" />
       </view>
-      <view v-if="cityDetail" class="detail-topbar-btn" hover-class="hover-opacity-60" @click="toggleFavorite">
-        <Icon name="bell" :type="isFavorited ? 'solid' : 'regular'" size="18px" :color="isFavorited ? '#fff' : 'rgba(255,255,255,0.5)'" />
+      <view class="flex items-center" style="gap: 10px;">
+        <view v-if="cityDetail" class="detail-topbar-btn" hover-class="hover-opacity-60" @click="onShare">
+          <Icon name="share-from-square" size="18px" color="rgba(255,255,255,0.8)" />
+        </view>
+        <view v-if="cityDetail" class="detail-topbar-btn" hover-class="hover-opacity-60" @click="toggleFavorite">
+          <Icon name="bell" :type="isFavorited ? 'solid' : 'regular'" size="18px" :color="isFavorited ? '#fff' : 'rgba(255,255,255,0.5)'" />
+        </view>
       </view>
     </view>
 
@@ -170,6 +175,23 @@ const formattedUpdatedAt = computed(() => {
 
 function goBack() {
   uni.navigateBack({ delta: 1 })
+}
+
+function onShare() {
+  if (!cityDetail.value) return
+  const c = cityDetail.value
+  const params = [
+    `cityId=${c.cityId}`,
+    `cityName=${encodeURIComponent(c.cityName || cityName.value)}`,
+    `temp=${c.current.temperature}`,
+    `weather=${encodeURIComponent(c.current.weatherText || '')}`,
+    `iconCode=${c.current.iconCode || ''}`,
+    `snowLevel=${encodeURIComponent(c.current.snowLevel || '无')}`,
+    `humidity=${c.current.humidity}`,
+    `windSpeed=${c.current.windSpeed}`,
+    `windDirection=${encodeURIComponent(c.current.windDirection || '')}`,
+  ].join('&')
+  uni.navigateTo({ url: `/pages/share/share?${params}` })
 }
 
 async function loadDetail() {

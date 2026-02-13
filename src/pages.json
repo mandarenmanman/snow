@@ -25,6 +25,14 @@
       "style": {
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/share/share",
+      "style": {
+        "navigationStyle": "custom",
+        "renderer": "skyline",
+        "disableScroll": true
+      }
     }
   ],
   "globalStyle": {

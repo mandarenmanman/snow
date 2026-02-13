@@ -7,6 +7,8 @@
   "transformPx": false,
   "mp-weixin": {
     "appid": "wx0000000000000000",
+    "lazyCodeLoading": "requiredComponents",
+    "componentFramework": "glass-easel",
     "setting": {
       "urlCheck": false,
       "es6": true,
@@ -18,15 +20,7 @@
     "optimization": {
       "subPackages": true
     },
-    "cloudfunctionRoot": "cloudfunctions/",
-    "permission": {
-      "scope.userLocation": {
-        "desc": "需要获取您的位置信息，用于查找附近降雪区域"
-      }
-    },
-    "requiredPrivateInfos": [
-      "getLocation"
-    ]
+    "cloudfunctionRoot": "cloudfunctions/"
   },
   "h5": {
     "devServer": {

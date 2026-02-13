@@ -40,6 +40,8 @@ const solidMap: Record<string, string> = {
   'arrow-left': '\uf060',
   'mountain-sun': '\ue52f',
   'bell': '\uf0f3',
+  'share-from-square': '\uf14d',
+  'arrow-down': '\uf063',
 }
 
 const regularMap: Record<string, string> = {
