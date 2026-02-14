@@ -176,7 +176,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onLoad, onShow, onPullDownRefresh, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import type { SnowRegion, SnowLevel } from '@/models/types'
 import { fetchSnowRegions, fetchSnowRegionsRemote, filterSnowingCities } from '@/services/snow-service'
 import { getNavBarInfo } from '@/utils/navbar'
@@ -725,6 +725,15 @@ onShow(() => {
   // 每次页面显示时刷新订阅状态（从 detail 页返回等场景）
   loadSubscriptions()
 })
+
+onShareAppMessage(() => ({
+  title: '西门问雪 — 发现身边的每一场雪',
+  path: '/pages/index/index',
+}))
+
+onShareTimeline(() => ({
+  title: '西门问雪 — 发现身边的每一场雪',
+}))
 </script>
 
 <style scoped>

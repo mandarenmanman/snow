@@ -67,9 +67,9 @@
               </view>
             </view>
 
-            <!-- 用户心情 -->
-            <view v-if="shareText" class="card-quote">
-              <text class="card-quote-text">"{{ shareText }}"</text>
+            <!-- 文案 -->
+            <view class="card-quote">
+              <text class="card-quote-text">"{{ quoteText }}"</text>
             </view>
 
             <!-- 底部品牌 -->
@@ -88,11 +88,11 @@
 
         <!-- 输入 + 按钮 -->
         <view class="bottom-area">
-          <view class="input-wrap">
+          <!-- <view class="input-wrap">
             <input v-model="shareText" class="share-input" placeholder="写一句分享心情..." maxlength="20"
               :placeholder-style="'color:#bbb;font-size:14px'" />
             <text class="input-count">{{ shareText.length }}/20</text>
-          </view>
+          </view> -->
           <view class="save-btn" hover-class="hover-opacity-80" :class="{ disabled: isGenerating }"
             @click="handleShare">
             <text class="fa-icon fa-share-nodes save-btn-icon"></text>
@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getNavBarInfo } from '@/utils/navbar'
 import WeatherIcon from '@/components/WeatherIcon.vue'
@@ -124,6 +124,31 @@ const isGenerating = ref(false)
 const qrcodeUrl = ref('/static/qrcode.jpg')
 const snowDays = ref<Array<{ label: string; level: string }>>([])
 
+/** 根据降雪状态自动生成分享文案 */
+const snowQuotes = [
+  '一起去看雪吧',
+  '听说那里在下雪，出发吗？',
+  '这场雪，值得奔赴',
+  '有些风景，落雪时才最美',
+  '趁雪还在，去见想见的人',
+]
+const noSnowQuotes = [
+  '等一场雪，赴一座城',
+  '雪会来的，和好消息一样',
+  '藏好期待，雪自会来',
+]
+const currentSnowQuotes = [
+  '此刻正在下雪，你感受到了吗',
+  '窗外飘雪，宜出发',
+  '这场雪，替我问候你',
+]
+
+const quoteText = computed(() => {
+  const pick = (arr: string[]) => arr[Math.floor(cityName.value.length % arr.length)]
+  if (snowLevel.value !== '无') return pick(currentSnowQuotes)
+  if (snowDays.value.length > 0) return pick(snowQuotes)
+  return pick(noSnowQuotes)
+})
 const { statusBarHeight, totalHeight } = getNavBarInfo()
 const navPadding = `${statusBarHeight}px`
 const navTotalHeight = totalHeight

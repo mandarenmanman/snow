@@ -109,7 +109,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import type { CityDetail } from '@/models/types'
 import { getNavBarInfo } from '@/utils/navbar'
 import { getScenics, getProvince } from '@/models/scenics'
@@ -300,6 +300,25 @@ onLoad((options) => {
     if (options.cityName) cityName.value = decodeURIComponent(options.cityName)
     loadDetail()
     checkFavoriteStatus()
+  }
+})
+
+onShareAppMessage(() => {
+  const name = cityDetail.value?.cityName || cityName.value || '未知城市'
+  const snow = cityDetail.value?.current.snowLevel
+  const title = snow && snow !== '无'
+    ? `${name}正在下${snow}！— 西门问雪`
+    : `${name}天气详情 — 西门问雪`
+  return {
+    title,
+    path: `/pages/detail/detail?cityId=${cityId.value}&cityName=${encodeURIComponent(name)}`,
+  }
+})
+
+onShareTimeline(() => {
+  const name = cityDetail.value?.cityName || cityName.value || '未知城市'
+  return {
+    title: `${name}天气详情 — 西门问雪`,
   }
 })
 </script>
