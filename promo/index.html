@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>西门问雪 — 发现身边的每一场雪</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: #0a1628;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* 雪花动画 */
+    .snowflake {
+      position: fixed;
+      top: -10px;
+      color: rgba(255, 255, 255, 0.6);
+      animation: fall linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+    @keyframes fall {
+      to { transform: translateY(105vh) rotate(360deg); }
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      background: linear-gradient(160deg, #0d1f3c 0%, #1a3a6b 40%, #2d6cb5 70%, #4a90d9 100%);
+      z-index: 1;
+    }
+    .hero-icon {
+      font-size: 64px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 24px;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #fff 0%, #a0d0ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .tagline {
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 500px;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+    .hero .sub-tagline {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 48px;
+    }
+
+    /* 功能卡片 */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 800px;
+      margin-bottom: 60px;
+    }
+    .feature-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: transform 0.3s, background 0.3s;
+      backdrop-filter: blur(10px);
+    }
+    .feature-card:hover {
+      transform: translateY(-6px);
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .feature-icon-wrap {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #5BA8F5 0%, #2979C1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .feature-icon { font-size: 22px; color: #fff; }
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .feature-card p {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.5;
+    }
+
+    /* 数据统计 */
+    .stats {
+      display: flex;
+      gap: 48px;
+      margin-bottom: 64px;
+    }
+    .stat { display: flex; flex-direction: column; align-items: center; }
+    .stat-num {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a0d0ff, #5BA8F5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { font-size: 14px; color: rgba(255, 255, 255, 0.5); margin-top: 4px; }
+
+    /* 步骤 */
+    .steps-section { margin-bottom: 64px; max-width: 700px; }
+    .section-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 32px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .steps { display: flex; gap: 32px; justify-content: center; }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #5BA8F5, #2979C1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .step-icon { font-size: 28px; color: rgba(255, 255, 255, 0.7); margin-bottom: 12px; }
+    .step-text { font-size: 14px; color: rgba(255, 255, 255, 0.65); line-height: 1.5; text-align: center; }
+
+    /* CTA */
+    .cta-section { margin-bottom: 48px; text-align: center; }
+    .qr-box {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .qr-img { width: 160px; height: 160px; border-radius: 12px; }
+    .qr-hint { font-size: 13px; color: #666; margin-top: 12px; }
+    .cta-text { font-size: 18px; color: rgba(255, 255, 255, 0.7); }
+
+    /* Footer */
+    .footer {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.3);
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      width: 100%;
+      text-align: center;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 32px; letter-spacing: 4px; }
+      .hero .tagline { font-size: 16px; }
+      .features { grid-template-columns: 1fr; gap: 12px; padding: 0 8px; }
+      .stats { gap: 24px; }
+      .stat-num { font-size: 28px; }
+      .steps { flex-direction: column; gap: 20px; }
+    }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 飘雪 -->
+  <div v-for="flake in snowflakes" :key="flake.id" class="snowflake"
+    :style="{ left: flake.left, fontSize: flake.size, opacity: flake.opacity, animationDuration: flake.duration, animationDelay: flake.delay }">
+    <i class="fa-solid fa-snowflake"></i>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <i class="fa-solid fa-snowflake hero-icon"></i>
+    <h1>西门问雪</h1>
+    <p class="tagline">当天气预报只说"雨夹雪"，<br>我们告诉你"现在出发，还能赶上长安的瑞雪"。</p>
+    <p class="sub-tagline">发现身边的每一场雪</p>
+
+    <!-- 功能卡片 -->
+    <div class="features">
+      <div class="feature-card" v-for="f in features" :key="f.icon">
+        <div class="feature-icon-wrap">
+          <i :class="f.icon" class="feature-icon"></i>
+        </div>
+        <h3>{{ f.title }}</h3>
+        <p>{{ f.desc }}</p>
+      </div>
+    </div>
+
+    <!-- 亮点数据 -->
+    <div class="stats">
+      <div class="stat" v-for="s in stats" :key="s.label">
+        <span class="stat-num">{{ s.value }}</span>
+        <span class="stat-label">{{ s.label }}</span>
+      </div>
+    </div>
+
+    <!-- 使用流程 -->
+    <div class="steps-section">
+      <h2 class="section-title">三步开始追雪</h2>
+      <div class="steps">
+        <div class="step" v-for="(step, i) in steps" :key="i">
+          <div class="step-num">{{ i + 1 }}</div>
+          <i :class="step.icon" class="step-icon"></i>
+          <p class="step-text">{{ step.text }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-section">
+      <div class="qr-box">
+        <img src="../src/static/qrcode.jpg" alt="小程序码" class="qr-img" />
+        <p class="qr-hint">微信扫码体验</p>
+      </div>
+      <p class="cta-text">这个冬天，别再错过身边的雪</p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <i class="fa-solid fa-snowflake" style="margin-right: 6px; font-size: 12px;"></i>
+      西门问雪 &copy; 2025 — 用心发现每一场雪
+    </div>
+  </section>
+
+</div>
+
+<script>
+const { createApp, ref } = Vue
+
+createApp({
+  setup() {
+    const snowflakes = ref(
+      Array.from({ length: 30 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100 + '%',
+        size: Math.random() * 14 + 8 + 'px',
+        opacity: Math.random() * 0.5 + 0.3,
+        duration: Math.random() * 6 + 6 + 's',
+        delay: Math.random() * 8 + 's',
+      }))
+    )
+
+    const features = ref([
+      { icon: 'fa-solid fa-snowflake', title: '实时降雪', desc: '全国降雪城市实时监测，第一时间知道哪里在下雪' },
+      { icon: 'fa-solid fa-map-location-dot', title: '降雪地图', desc: '一张地图看遍全国雪况，标记每一个飘雪的城市' },
+      { icon: 'fa-solid fa-bell', title: '降雪提醒', desc: '订阅关注城市，未来降雪提前推送通知' },
+      { icon: 'fa-solid fa-calendar-days', title: '15天预报', desc: '未来15天降雪预报，提前规划你的追雪之旅' },
+      { icon: 'fa-solid fa-share-nodes', title: '分享海报', desc: '一键生成精美雪景卡片，分享给朋友' },
+      { icon: 'fa-solid fa-mountain-sun', title: '热门景区', desc: '推荐各城市赏雪景点，不错过每一处雪景' },
+    ])
+
+    const stats = ref([
+      { value: '300+', label: '监测城市' },
+      { value: '15天', label: '预报周期' },
+      { value: '实时', label: '数据更新' },
+    ])
+
+    const steps = ref([
+      { icon: 'fa-solid fa-magnifying-glass', text: '搜索或浏览感兴趣的城市' },
+      { icon: 'fa-solid fa-bell', text: '订阅城市，开启降雪提醒' },
+      { icon: 'fa-solid fa-paper-plane', text: '收到通知，出发追雪' },
+    ])
+
+    return { snowflakes, features, stats, steps }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
